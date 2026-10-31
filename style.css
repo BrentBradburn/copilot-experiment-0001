@@ -54,6 +54,7 @@ input[type="range"] { width: 100%; margin: 6px 0; accent-color: var(--accent); c
 .primary-button:hover { background: #a1f0d9; }
 .reset-button { display: block; width: 100%; border: 1px solid #30394a; background: transparent; color: #b2bdd0; border-radius: 7px; font-size: 11px; padding: 11px; margin-top: 10px; }
 .reset-button:hover { background: #202b3c; }
+#demo[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .keyboard-hint { text-align: center; color: #6f7e98; font-size: 9px; margin: 14px 0 0; }
 kbd { font: inherit; border: 1px solid #394357; padding: 2px 5px; border-radius: 3px; margin-right: 4px; }
 .telemetry { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid #282f3e; border-radius: 10px; padding: 20px 0; margin-top: 20px; background: #101621; }
