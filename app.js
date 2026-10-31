@@ -26,8 +26,8 @@ function draw() {
   const aspect = bounds.width / bounds.height;
   const limit = Number($('iterations').value) + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
   const maxPixels = Math.max(20000, Math.min(playing ? 130000 : 650000, Math.floor(MAX_WORK / limit)));
-  const width = Math.max(1, Math.round(Math.min(bounds.width * Math.min(devicePixelRatio || 1, 2), Math.sqrt(maxPixels * aspect))));
-  const height = Math.max(1, Math.round(width / aspect));
+  const width = Math.max(1, Math.floor(Math.min(bounds.width * Math.min(devicePixelRatio || 1, 2), Math.sqrt(maxPixels * aspect))));
+  const height = Math.max(1, Math.floor(width / aspect));
   buffer.width = width;
   buffer.height = height;
   const image = bufferContext.createImageData(width, height);
