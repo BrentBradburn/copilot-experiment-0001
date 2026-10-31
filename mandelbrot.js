@@ -49,6 +49,18 @@ export function zoomAt(view, factor, u = 0.5, v = 0.5, aspect = 1) {
   return { x: anchor.x - (u - 0.5) * span, y: anchor.y - (0.5 - v) * span / aspect, span };
 }
 
+export function panBy(view, du, dv, aspect = 1) {
+  return { x: view.x - du * view.span, y: view.y + dv * view.span / aspect, span: view.span };
+}
+
+export function panOffset(from, to, width, height) {
+  const aspect = width / height;
+  return {
+    x: (from.x - to.x) / to.span * width,
+    y: (to.y - from.y) * aspect / to.span * height,
+  };
+}
+
 export function pickPointOfInterest(random = Math.random, avoid) {
   const keys = Object.keys(pointsOfInterest);
   const choices = keys.filter((key) => key !== avoid);

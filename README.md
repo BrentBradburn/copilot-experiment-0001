@@ -20,8 +20,9 @@ Add `?demo` to the URL to start in demo mode.
 
 - Click **Start demo** to tour known points of interest. The viewer picks one at random, zooms in, then zooms back out, and repeats until you stop it or take control.
 - Click **Start zooming** (or press **Space**) to animate toward the view’s center.
+- Drag the image to pan. The current frame follows the pointer immediately, then the view re-renders.
 - Scroll over the image to zoom toward the pointer, or use the **+ / −** buttons.
-- Click the image to recenter and zoom into a feature.
+- Click the image to zoom in while keeping the point under the pointer fixed.
 - Select a destination or **Reset view** to return to a preset.
 - Adjust zoom speed, iteration detail, and palette while exploring.
 - Use **⛶** to expand the visualization to fullscreen.
@@ -39,4 +40,4 @@ npm test
 ```
 
 Tests use Node’s built-in test runner to check escape calculations, pixel colors,
-coordinate mapping, pointer-anchored zooming, zoom limits, and the demo tour.
+coordinate mapping, pointer-anchored zooming, panning, zoom limits, and the demo tour.

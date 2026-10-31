@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeTime, pointAt, zoomAt, renderPixels, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, DEMO_DWELL_SECONDS } from './mandelbrot.js';
+import { escapeTime, pointAt, zoomAt, panBy, panOffset, renderPixels, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, DEMO_DWELL_SECONDS } from './mandelbrot.js';
 
 test('known interior points remain bounded and exterior points escape', () => {
   for (const [x, y] of [[0, 0], [-1, 0], [-0.5, 0.5]]) assert.equal(escapeTime(x, y, 240), -1);
@@ -20,6 +20,42 @@ test('zoom preserves the coordinate under the pointer', () => {
   const after = pointAt(zoomAt(view, 0.4, 0.2, 0.7, 1.8), 0.2, 0.7, 1.8);
   assert.ok(Math.abs(before.x - after.x) < 1e-14);
   assert.ok(Math.abs(before.y - after.y) < 1e-14);
+});
+
+test('pointer zoom holds the clicked coordinate instead of recentering on it', () => {
+  const view = { x: -0.5, y: 0.2, span: 2 };
+  const aspect = 1.5;
+  const u = 0.25;
+  const v = 0.8;
+  const clicked = pointAt(view, u, v, aspect);
+  const zoomed = zoomAt(view, 0.7, u, v, aspect);
+  const underPointer = pointAt(zoomed, u, v, aspect);
+  assert.ok(Math.abs(underPointer.x - clicked.x) < 1e-12);
+  assert.ok(Math.abs(underPointer.y - clicked.y) < 1e-12);
+  assert.ok(Math.abs(zoomed.x - clicked.x) > 1e-6);
+  assert.ok(Math.abs(zoomed.y - clicked.y) > 1e-6);
+  assert.ok(zoomed.span < view.span);
+});
+
+test('dragging pans the view and the preview follows the pointer', () => {
+  const view = { x: -0.25, y: 0.4, span: 1.6 };
+  const aspect = 1.25;
+  const u = 0.3;
+  const v = 0.6;
+  const grabbed = pointAt(view, u, v, aspect);
+  const du = 0.15;
+  const dv = -0.2;
+  const panned = panBy(view, du, dv, aspect);
+  assert.equal(panned.span, view.span);
+  const moved = pointAt(panned, u + du, v + dv, aspect);
+  assert.ok(Math.abs(moved.x - grabbed.x) < 1e-12);
+  assert.ok(Math.abs(moved.y - grabbed.y) < 1e-12);
+  const offset = panOffset(view, panned, 800, 640);
+  assert.ok(Math.abs(offset.x - du * 800) < 1e-9);
+  assert.ok(Math.abs(offset.y - dv * 640) < 1e-9);
+  const back = panBy(panned, -du, -dv, aspect);
+  assert.ok(Math.abs(back.x - view.x) < 1e-12);
+  assert.ok(Math.abs(back.y - view.y) < 1e-12);
 });
 
 test('zoom clamps at the floating-point precision and overview limits', () => {

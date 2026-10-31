@@ -19,7 +19,8 @@ h1 { font-size: clamp(38px, 5vw, 56px); letter-spacing: -2px; margin: 12px 0 8px
 .intro p { color: var(--muted); font-size: 15px; margin: 0 0 32px; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 304px; gap: 22px; }
 .viewer { position: relative; min-height: 520px; overflow: hidden; border: 1px solid #303847; border-radius: 14px; background: #050a14; }
-canvas { display: block; width: 100%; height: 100%; position: absolute; cursor: crosshair; touch-action: manipulation; }
+canvas { display: block; width: 100%; height: 100%; position: absolute; cursor: grab; touch-action: none; }
+canvas.panning { cursor: grabbing; }
 .viewer-top, .viewer-bottom { position: absolute; left: 22px; right: 22px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
 .viewer-top { top: 20px; }
 .viewer-bottom { bottom: 20px; }

@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, ZOOM_RATE, destinations, palettes, pointAt, zoomAt, renderPixels, pointsOfInterest, startDemo, stepDemo } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, ZOOM_RATE, destinations, palettes, zoomAt, panBy, panOffset, renderPixels, pointsOfInterest, startDemo, stepDemo } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -12,6 +12,12 @@ let demo = null;
 let pending = false;
 let lastTime = 0;
 let status = 'Ready to explore';
+let dragging = false;
+let drag = null;
+let suppressClick = false;
+let rendered = null;
+let panRenderTimer = 0;
+const PAN_THRESHOLD = 3;
 
 function updateTelemetry() {
   const zoom = INITIAL_SPAN / view.span;
@@ -26,7 +32,7 @@ function draw() {
   if (!bounds.width || !bounds.height) return;
   const aspect = bounds.width / bounds.height;
   const limit = Number($('iterations').value) + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
-  const maxPixels = Math.max(20000, Math.min(playing ? 130000 : 650000, Math.floor(MAX_WORK / limit)));
+  const maxPixels = Math.max(20000, Math.min(playing || dragging ? 130000 : 650000, Math.floor(MAX_WORK / limit)));
   const width = Math.max(1, Math.floor(Math.min(bounds.width * Math.min(devicePixelRatio || 1, 2), Math.sqrt(maxPixels * aspect))));
   const height = Math.max(1, Math.floor(width / aspect));
   buffer.width = width;
@@ -41,6 +47,7 @@ function draw() {
     canvas.height = displayHeight;
   }
   context.drawImage(buffer, 0, 0, canvas.width, canvas.height);
+  rendered = { x: view.x, y: view.y, span: view.span, width: canvas.width, height: canvas.height };
   updateTelemetry();
 }
 
@@ -122,9 +129,14 @@ function resetView() {
   setPlaying(false, 'Ready to explore');
 }
 
+function releaseDemo() {
+  if (!demo) return false;
+  demo = null;
+  return true;
+}
+
 function manualZoom(factor, u = 0.5, v = 0.5) {
-  const tookOver = Boolean(demo);
-  if (tookOver) demo = null;
+  const tookOver = releaseDemo();
   view = zoomAt(view, factor, u, v, canvas.clientWidth / canvas.clientHeight);
   if (tookOver) {
     setPlaying(false, 'Paused');
@@ -132,6 +144,71 @@ function manualZoom(factor, u = 0.5, v = 0.5) {
   }
   status = view.span <= MIN_SPAN ? 'Precision limit reached' : playing ? 'Exploring' : 'Paused';
   updateControls();
+  requestDraw();
+}
+
+function pointerFractions(event) {
+  const bounds = canvas.getBoundingClientRect();
+  return {
+    u: (event.clientX - bounds.left) / bounds.width,
+    v: (event.clientY - bounds.top) / bounds.height,
+    bounds,
+  };
+}
+
+function cancelPanRender() {
+  if (!panRenderTimer) return;
+  clearTimeout(panRenderTimer);
+  panRenderTimer = 0;
+}
+
+function schedulePanRender() {
+  cancelPanRender();
+  panRenderTimer = setTimeout(() => {
+    panRenderTimer = 0;
+    if (dragging) requestDraw();
+  }, 120);
+}
+
+function showPanPreview() {
+  const sameFrame = rendered
+    && rendered.width === canvas.width
+    && rendered.height === canvas.height
+    && rendered.span === view.span;
+  if (!sameFrame) {
+    updateTelemetry();
+    requestDraw();
+    return;
+  }
+  const offset = panOffset(rendered, view, canvas.width, canvas.height);
+  context.fillStyle = '#050912';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(buffer, offset.x, offset.y, canvas.width, canvas.height);
+  updateTelemetry();
+  if (playing) requestDraw();
+  else schedulePanRender();
+}
+
+function beginPan() {
+  dragging = true;
+  canvas.classList.add('panning');
+  $('location-label').textContent = 'Custom coordinates';
+  if (releaseDemo()) {
+    playing = false;
+    lastTime = 0;
+    updateControls();
+  }
+  status = 'Panning';
+  updateTelemetry();
+}
+
+function finishPan() {
+  dragging = false;
+  canvas.classList.remove('panning');
+  cancelPanRender();
+  status = view.span <= MIN_SPAN ? 'Precision limit reached' : playing ? 'Exploring' : 'Paused';
+  updateControls();
+  updateTelemetry();
   requestDraw();
 }
 
@@ -157,15 +234,57 @@ $('palette').addEventListener('change', () => {
 });
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
-  const bounds = canvas.getBoundingClientRect();
-  manualZoom(Math.exp(Math.max(-0.5, Math.min(0.5, event.deltaY * 0.002))), (event.clientX - bounds.left) / bounds.width, (event.clientY - bounds.top) / bounds.height);
+  const { u, v } = pointerFractions(event);
+  manualZoom(Math.exp(Math.max(-0.5, Math.min(0.5, event.deltaY * 0.002))), u, v);
 }, { passive: false });
+canvas.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0 || !event.isPrimary) return;
+  try {
+    canvas.setPointerCapture(event.pointerId);
+  } catch {
+    // The pointer can already be inactive; dragging still tracks while it stays over the canvas.
+  }
+  drag = { pointerId: event.pointerId, originX: event.clientX, originY: event.clientY, lastX: event.clientX, lastY: event.clientY, moved: false };
+});
+canvas.addEventListener('pointermove', (event) => {
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  if (event.buttons === 0) {
+    endDrag(event);
+    return;
+  }
+  const dx = event.clientX - drag.lastX;
+  const dy = event.clientY - drag.lastY;
+  if (!drag.moved && Math.hypot(event.clientX - drag.originX, event.clientY - drag.originY) < PAN_THRESHOLD) return;
+  if (!drag.moved) beginPan();
+  drag.moved = true;
+  drag.lastX = event.clientX;
+  drag.lastY = event.clientY;
+  const { bounds } = pointerFractions(event);
+  if (!bounds.width || !bounds.height) return;
+  view = panBy(view, dx / bounds.width, dy / bounds.height, bounds.width / bounds.height);
+  showPanPreview();
+});
+function endDrag(event) {
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  const moved = drag.moved;
+  drag = null;
+  if (!moved) return;
+  suppressClick = true;
+  setTimeout(() => { suppressClick = false; }, 0);
+  finishPan();
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('lostpointercapture', endDrag);
 canvas.addEventListener('click', (event) => {
-  const bounds = canvas.getBoundingClientRect();
-  const point = pointAt(view, (event.clientX - bounds.left) / bounds.width, (event.clientY - bounds.top) / bounds.height, bounds.width / bounds.height);
-  view = { ...view, ...point };
+  if (suppressClick) {
+    suppressClick = false;
+    return;
+  }
+  const { u, v, bounds } = pointerFractions(event);
+  if (!bounds.width || !bounds.height || u < 0 || u > 1 || v < 0 || v > 1) return;
   $('location-label').textContent = 'Custom coordinates';
-  manualZoom(0.7);
+  manualZoom(0.7, u, v);
 });
 document.addEventListener('keydown', (event) => {
   if (event.code !== 'Space' || event.repeat || event.target.closest('button, input, select, a')) return;
