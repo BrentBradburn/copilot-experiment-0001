@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0c101b">
+    <title>Infinite — Mandelbrot Explorer</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230c101b'/%3E%3Ctext x='32' y='47' text-anchor='middle' font-size='54' fill='%2378e1c4'%3E∞%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="./"><span class="brand-icon">∞</span> infinite<span class="brand-dot">.</span></a>
+      <span class="header-label">MANDELBROT EXPLORER</span>
+      <a class="about-link" href="#about">What am I looking at? ↗</a>
+    </header>
+    <main>
+      <section class="intro">
+        <div class="eyebrow"><span></span> A LITTLE MATH. ENDLESS POSSIBILITY.</div>
+        <h1>Go deeper.</h1>
+        <p>Discover an infinite world hiding in a simple equation.</p>
+      </section>
+      <div class="workspace">
+        <section class="viewer" aria-label="Interactive Mandelbrot visualization">
+          <canvas id="fractal" tabindex="0" aria-label="Mandelbrot set. Scroll to zoom, click to recenter, or use the zoom buttons."></canvas>
+          <div class="viewer-top"><span class="live-badge"><i></i> LIVE RENDER</span><button id="fullscreen" class="glass-button" aria-label="Toggle fullscreen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg></button></div>
+          <div class="viewer-bottom">
+            <span id="location-label">Seahorse valley</span>
+            <div class="zoom-buttons"><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button></div>
+          </div>
+          <div class="canvas-hint">SCROLL TO ZOOM <span>·</span> CLICK TO EXPLORE</div>
+        </section>
+        <aside class="controls" aria-label="Explorer controls">
+          <div class="panel-heading"><h2>Your expedition</h2><span>01 / ∞</span></div>
+          <label for="destination">DESTINATION</label>
+          <select id="destination">
+            <option value="seahorse">Seahorse valley</option>
+            <option value="overview">The whole Mandelbrot set</option>
+            <option value="elephant">Elephant valley</option>
+            <option value="spiral">Spiral coast</option>
+          </select>
+          <p class="field-note">Pick a starting point. See where it takes you.</p>
+          <div class="separator"></div>
+          <div class="label-row"><label for="speed">ZOOM SPEED</label><output id="speed-value" for="speed">1.0×</output></div>
+          <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1">
+          <div class="range-labels"><span>Take it slow</span><span>Dive in</span></div>
+          <div class="label-row detail-label"><label for="iterations">DETAIL LEVEL</label><output id="iterations-value" for="iterations">240</output></div>
+          <input id="iterations" type="range" min="80" max="800" step="40" value="240">
+          <div class="range-labels"><span>Faster</span><span>Sharper</span></div>
+          <div class="separator"></div>
+          <label for="palette">COLOR PALETTE</label>
+          <select id="palette">
+            <option value="aurora">Aurora · teal & gold</option>
+            <option value="ember">Ember · violet & orange</option>
+            <option value="ocean">Ocean · deep blue & ice</option>
+          </select>
+          <div class="palette-preview" id="palette-preview" aria-hidden="true"></div>
+          <button id="play" class="primary-button" aria-pressed="false">▶ Start zooming</button>
+          <button id="reset" class="reset-button">↺ Reset view</button>
+          <p class="keyboard-hint"><kbd>Space</kbd> to play or pause</p>
+        </aside>
+      </div>
+      <section class="telemetry" aria-label="Current view">
+        <div><span>MAGNIFICATION</span><strong id="magnification">1.00×</strong></div>
+        <div><span>REAL AXIS</span><strong id="real-axis">−0.743644</strong></div>
+        <div><span>IMAGINARY AXIS</span><strong id="imaginary-axis">0.131826</strong></div>
+        <div><span>STATUS</span><strong id="status"><i></i> Ready to explore</strong></div>
+      </section>
+      <footer id="about">
+        <div><span class="footer-symbol">z² + c</span><p>The Mandelbrot set: a boundary of infinite complexity.<br>Every zoom reveals something you’ve never seen before.</p></div>
+        <span>Built with math. Made for curiosity.</span>
+      </footer>
+    </main>
+  </body>
+</html>

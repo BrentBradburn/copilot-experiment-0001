@@ -1,0 +1,14 @@
+{
+  "name": "copilot-experiment-0001",
+  "version": "1.0.0",
+  "description": "An interactive, animated Mandelbrot explorer",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "private": true
+}
