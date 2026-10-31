@@ -1,11 +1,20 @@
 export const INITIAL_SPAN = 3.5;
 export const MIN_SPAN = INITIAL_SPAN / 1e13;
+export const ZOOM_RATE = 0.55;
+export const DEMO_ZOOM_RATIO = 48;
+export const DEMO_DWELL_SECONDS = 0.75;
 
 export const destinations = {
   overview: { x: -0.5, y: 0, span: INITIAL_SPAN },
   seahorse: { x: -0.743643887037151, y: 0.13182590420533, span: 0.018 },
   elephant: { x: 0.275, y: 0.008, span: 0.08 },
   spiral: { x: -0.761574, y: -0.0847596, span: 0.012 },
+};
+
+export const pointsOfInterest = {
+  seahorse: { ...destinations.seahorse, label: 'Seahorse valley' },
+  elephant: { ...destinations.elephant, label: 'Elephant valley' },
+  spiral: { ...destinations.spiral, label: 'Spiral coast' },
 };
 
 export const palettes = {
@@ -38,6 +47,80 @@ export function zoomAt(view, factor, u = 0.5, v = 0.5, aspect = 1) {
   const anchor = pointAt(view, u, v, aspect);
   const span = Math.max(MIN_SPAN, Math.min(INITIAL_SPAN * 2, view.span * factor));
   return { x: anchor.x - (u - 0.5) * span, y: anchor.y - (0.5 - v) * span / aspect, span };
+}
+
+export function pickPointOfInterest(random = Math.random, avoid) {
+  const keys = Object.keys(pointsOfInterest);
+  const choices = keys.filter((key) => key !== avoid);
+  const pool = choices.length ? choices : keys;
+  const index = Math.floor(random() * pool.length);
+  return pool[index] ?? pool[0];
+}
+
+export function createDemoState(key) {
+  const poi = pointsOfInterest[key];
+  const home = { x: poi.x, y: poi.y, span: poi.span };
+  return {
+    key,
+    phase: 'in',
+    dwell: 0,
+    home,
+    deepSpan: Math.min(home.span / 2, Math.max(MIN_SPAN * 4, home.span / DEMO_ZOOM_RATIO)),
+    view: { ...home },
+  };
+}
+
+export function startDemo(random = Math.random, avoid) {
+  return createDemoState(pickPointOfInterest(random, avoid));
+}
+
+function demoFrame(state, span, phase, dwell) {
+  return {
+    ...state,
+    phase,
+    dwell,
+    home: { ...state.home },
+    view: { x: state.home.x, y: state.home.y, span },
+  };
+}
+
+function stepDemoOnce(state, elapsed, speed, random) {
+  if (state.phase === 'dwell-in' || state.phase === 'dwell-out') {
+    const dwell = state.dwell + elapsed;
+    if (dwell < DEMO_DWELL_SECONDS) return { state: demoFrame(state, state.view.span, state.phase, dwell), relocated: false };
+    if (state.phase === 'dwell-in') return { state: demoFrame(state, state.deepSpan, 'out', 0), relocated: false };
+    return { state: startDemo(random, state.key), relocated: true };
+  }
+
+  const inward = state.phase === 'in';
+  const factor = Math.exp((inward ? -elapsed : elapsed) * speed * ZOOM_RATE);
+  let span = state.view.span * factor;
+  let phase = state.phase;
+  if (inward && span <= state.deepSpan) {
+    span = state.deepSpan;
+    phase = 'dwell-in';
+  } else if (!inward && span >= state.home.span) {
+    span = state.home.span;
+    phase = 'dwell-out';
+  }
+  return { state: demoFrame(state, span, phase, 0), relocated: false };
+}
+
+export function stepDemo(state, elapsed, speed = 1, random = Math.random) {
+  const safeElapsed = Math.max(0, Number(elapsed) || 0);
+  const safeSpeed = Math.max(0, Number(speed) || 0);
+  if (!safeElapsed || !safeSpeed) return { state, relocated: false };
+  let current = state;
+  let relocated = false;
+  let remaining = safeElapsed;
+  while (remaining > 0) {
+    const dt = Math.min(0.05, remaining);
+    const result = stepDemoOnce(current, dt, safeSpeed, random);
+    current = result.state;
+    relocated = relocated || result.relocated;
+    remaining -= dt;
+  }
+  return { state: current, relocated };
 }
 
 export function renderPixels(pixels, width, height, view, limit, palette) {
