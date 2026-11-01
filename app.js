@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, ZOOM_RATE, correspondingC, destinations, palettes, zoomAt, panBy, panOffset, renderPixels, renderJuliaPixels, pointsOfInterest, startDemo, stepDemo } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderJuliaPixels, pointsOfInterest, startDemo, stepDemo } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -12,6 +12,7 @@ const juliaBufferContext = juliaBuffer.getContext('2d', { alpha: false });
 const MAX_WORK = 60000000;
 let view = { ...destinations.seahorse };
 let playing = false;
+let zoomDirection = 'in';
 let demo = null;
 let pending = false;
 let lastTime = 0;
@@ -109,14 +110,35 @@ function demoStatus(state) {
   return 'Demo · holding';
 }
 
+function playingStatus() {
+  if (demo) return demoStatus(demo);
+  return zoomDirection === 'out' ? 'Zooming out' : 'Zooming in';
+}
+
+function zoomLimitMessage(direction = zoomDirection) {
+  return direction === 'out' ? 'Overview limit reached' : 'Precision limit reached';
+}
+
+function atZoomLimit(direction = zoomDirection) {
+  return direction === 'out' ? view.span >= INITIAL_SPAN * 2 : view.span <= MIN_SPAN;
+}
+
 function updateControls() {
-  const playLabel = playing
-    ? (demo ? 'Ⅱ Pause demo' : 'Ⅱ Pause zooming')
-    : (demo ? '▶ Resume demo' : '▶ Start zooming');
-  $('play').textContent = playLabel;
-  $('play').setAttribute('aria-pressed', String(playing));
+  const zoomingIn = playing && !demo && zoomDirection !== 'out';
+  const zoomingOut = playing && !demo && zoomDirection === 'out';
+  const inButton = $('play-in');
+  const outButton = $('play-out');
+  inButton.textContent = zoomingIn ? 'Ⅱ Pause' : '▶ Zoom in';
+  outButton.textContent = zoomingOut ? 'Ⅱ Pause' : '▶ Zoom out';
+  inButton.setAttribute('aria-pressed', String(zoomingIn));
+  inButton.setAttribute('aria-label', zoomingIn ? 'Pause zooming in' : 'Start zooming in');
+  outButton.setAttribute('aria-pressed', String(zoomingOut));
+  outButton.setAttribute('aria-label', zoomingOut ? 'Pause zooming out' : 'Start zooming out');
   $('demo').textContent = demo ? 'Stop demo' : 'Start demo';
   $('demo').setAttribute('aria-pressed', String(Boolean(demo)));
+  const hint = $('keyboard-hint');
+  hint.replaceChildren(document.createElement('kbd'), document.createTextNode(demo ? (playing ? ' to pause demo' : ' to resume demo') : ' to play or pause'));
+  hint.querySelector('kbd').textContent = 'Space';
   $('live-badge').replaceChildren(document.createElement('i'), document.createTextNode(demo ? ' DEMO' : ' LIVE RENDER'));
 }
 
@@ -138,9 +160,9 @@ function frame(time) {
     status = demoStatus(demo);
   } else if (playing) {
     const elapsed = lastTime ? Math.min((time - lastTime) / 1000, 0.15) : 0;
-    view = zoomAt(view, Math.exp(-elapsed * Number($('speed').value) * ZOOM_RATE));
+    view = zoomAt(view, continuousZoomFactor(elapsed, Number($('speed').value), zoomDirection));
     lastTime = time;
-    if (view.span <= MIN_SPAN) setPlaying(false, 'Precision limit reached');
+    if (atZoomLimit()) setPlaying(false, zoomLimitMessage());
   }
   draw();
   if (playing) requestDraw();
@@ -156,7 +178,7 @@ function requestDraw() {
 function setPlaying(value, message) {
   playing = value;
   lastTime = 0;
-  status = message || (playing ? (demo ? demoStatus(demo) : 'Exploring') : (demo ? 'Demo paused' : 'Paused'));
+  status = message || (playing ? playingStatus() : (demo ? 'Demo paused' : 'Paused'));
   updateControls();
   requestDraw();
 }
@@ -194,7 +216,7 @@ function manualZoom(factor, u = 0.5, v = 0.5) {
     setPlaying(false, 'Paused');
     return;
   }
-  status = view.span <= MIN_SPAN ? 'Precision limit reached' : playing ? 'Exploring' : 'Paused';
+  status = view.span <= MIN_SPAN ? 'Precision limit reached' : playing ? playingStatus() : 'Paused';
   updateControls();
   requestDraw();
 }
@@ -262,13 +284,41 @@ function finishPan() {
   dragging = false;
   canvas.classList.remove('panning');
   cancelPanRender();
-  status = view.span <= MIN_SPAN ? 'Precision limit reached' : playing ? 'Exploring' : 'Paused';
+  status = view.span <= MIN_SPAN ? 'Precision limit reached' : playing ? playingStatus() : 'Paused';
   updateControls();
   updateTelemetry();
   requestDraw();
 }
 
-$('play').addEventListener('click', () => setPlaying(!playing));
+function startZoom(direction) {
+  const takingOverDemo = demo !== null;
+  if (takingOverDemo) demo = null;
+  if (!takingOverDemo && playing && zoomDirection === direction) {
+    setPlaying(false);
+    return;
+  }
+  zoomDirection = direction;
+  if (atZoomLimit(direction)) {
+    setPlaying(false, zoomLimitMessage(direction));
+    return;
+  }
+  setPlaying(true);
+}
+
+function togglePlaying() {
+  if (playing) {
+    setPlaying(false);
+    return;
+  }
+  if (!demo && atZoomLimit()) {
+    setPlaying(false, zoomLimitMessage());
+    return;
+  }
+  setPlaying(true);
+}
+
+$('play-in').addEventListener('click', () => startZoom('in'));
+$('play-out').addEventListener('click', () => startZoom('out'));
 $('demo').addEventListener('click', () => {
   if (demo) endDemo();
   else beginDemo();
@@ -345,7 +395,7 @@ canvas.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
   if (event.code !== 'Space' || event.repeat || event.target.closest('button, input, select, a')) return;
   event.preventDefault();
-  setPlaying(!playing);
+  togglePlaying();
 });
 $('fullscreen').addEventListener('click', async () => {
   try {

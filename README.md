@@ -20,7 +20,7 @@ Add `?demo` to the URL to start in demo mode.
 ## Explore
 
 - Click **Start demo** to tour known points of interest. The viewer picks one at random, zooms in, then zooms back out, and repeats until you stop it or take control.
-- Click **Start zooming** (or press **Space**) to animate toward the view’s center.
+- Click **Zoom in** or **Zoom out** to animate toward or away from the view’s center. Click the active direction again, or press **Space**, to pause. **Space** resumes the last direction.
 - Drag the image to pan. The current frame follows the pointer immediately, then the view re-renders.
 - Scroll over the image to zoom toward the pointer, or use the **+ / −** buttons.
 - Click the image to zoom in while keeping the point under the pointer fixed.
@@ -43,4 +43,4 @@ npm test
 
 Tests use Node’s built-in test runner to check escape calculations, pixel colors,
 coordinate mapping, pointer-anchored zooming, panning, zoom limits, the demo tour,
-and the Julia set that corresponds to the current view center.
+animated zoom in and out, the side-by-side zoom controls, and the Julia set that corresponds to the current view center.
