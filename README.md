@@ -2,6 +2,7 @@
 
 A dependency-free web application for exploring the Mandelbrot set with smooth
 animated zooming, destination presets, adjustable detail and three color palettes.
+A smaller view shows the Julia set for the center of the Mandelbrot image.
 
 ## Run
 
@@ -26,6 +27,7 @@ Add `?demo` to the URL to start in demo mode.
 - Select a destination or **Reset view** to return to a preset.
 - Adjust zoom speed, iteration detail, and palette while exploring.
 - Use **⛶** to expand the visualization to fullscreen.
+- Watch the smaller **Live Julia** view: it is the Julia set for the center of the Mandelbrot image and updates as you pan, zoom, or play.
 
 Animation renders at reduced resolution for responsiveness; pausing restores
 detail. Higher iteration counts reveal more boundary structure but take longer
@@ -40,4 +42,5 @@ npm test
 ```
 
 Tests use Node’s built-in test runner to check escape calculations, pixel colors,
-coordinate mapping, pointer-anchored zooming, panning, zoom limits, and the demo tour.
+coordinate mapping, pointer-anchored zooming, panning, zoom limits, the demo tour,
+and the Julia set that corresponds to the current view center.

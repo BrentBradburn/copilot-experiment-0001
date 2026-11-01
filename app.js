@@ -1,10 +1,14 @@
-import { INITIAL_SPAN, MIN_SPAN, ZOOM_RATE, destinations, palettes, zoomAt, panBy, panOffset, renderPixels, pointsOfInterest, startDemo, stepDemo } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, ZOOM_RATE, correspondingC, destinations, palettes, zoomAt, panBy, panOffset, renderPixels, renderJuliaPixels, pointsOfInterest, startDemo, stepDemo } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
 const context = canvas.getContext('2d', { alpha: false });
 const buffer = document.createElement('canvas');
 const bufferContext = buffer.getContext('2d', { alpha: false });
+const juliaCanvas = $('julia');
+const juliaContext = juliaCanvas.getContext('2d', { alpha: false });
+const juliaBuffer = document.createElement('canvas');
+const juliaBufferContext = juliaBuffer.getContext('2d', { alpha: false });
 const MAX_WORK = 60000000;
 let view = { ...destinations.seahorse };
 let playing = false;
@@ -18,7 +22,19 @@ let suppressClick = false;
 let rendered = null;
 let panRenderTimer = 0;
 let fullQualityPanRender = false;
+let lastJuliaDraw = 0;
+let juliaKey = '';
 const PAN_THRESHOLD = 3;
+
+function formatSigned(value) {
+  const text = Math.abs(value).toFixed(6);
+  return value < 0 ? `−${text}` : text;
+}
+
+function formatC(c) {
+  const sign = c.y < 0 ? '−' : '+';
+  return `c = ${formatSigned(c.x)} ${sign} ${Math.abs(c.y).toFixed(6)}i`;
+}
 
 function updateTelemetry() {
   const zoom = INITIAL_SPAN / view.span;
@@ -51,6 +67,40 @@ function draw() {
   rendered = { x: view.x, y: view.y, span: view.span, width: canvas.width, height: canvas.height };
   fullQualityPanRender = false;
   updateTelemetry();
+  drawJulia();
+}
+
+function drawJulia(throttled = false) {
+  const now = performance.now();
+  if (throttled && now - lastJuliaDraw < 100) return;
+  const bounds = juliaCanvas.getBoundingClientRect();
+  if (!bounds.width || !bounds.height) return;
+  const c = correspondingC(view);
+  const limit = Math.min(Number($('iterations').value), playing || dragging ? 100 : 220);
+  const quality = playing || dragging ? 'low' : 'high';
+  const key = `${c.x},${c.y},${limit},${quality},${$('palette').value},${bounds.width},${bounds.height}`;
+  if (key === juliaKey) return;
+  juliaKey = key;
+  lastJuliaDraw = now;
+  const aspect = bounds.width / bounds.height;
+  const maxPixels = playing || dragging ? 20000 : 70000;
+  const width = Math.max(1, Math.floor(Math.min(bounds.width * Math.min(devicePixelRatio || 1, 2), Math.sqrt(maxPixels * aspect))));
+  const height = Math.max(1, Math.floor(width / aspect));
+  juliaBuffer.width = width;
+  juliaBuffer.height = height;
+  const image = juliaBufferContext.createImageData(width, height);
+  renderJuliaPixels(image.data, width, height, c, limit, palettes[$('palette').value]);
+  juliaBufferContext.putImageData(image, 0, 0);
+  const displayWidth = Math.round(bounds.width * Math.min(devicePixelRatio || 1, 2));
+  const displayHeight = Math.round(bounds.height * Math.min(devicePixelRatio || 1, 2));
+  if (juliaCanvas.width !== displayWidth || juliaCanvas.height !== displayHeight) {
+    juliaCanvas.width = displayWidth;
+    juliaCanvas.height = displayHeight;
+  }
+  juliaContext.drawImage(juliaBuffer, 0, 0, juliaCanvas.width, juliaCanvas.height);
+  const label = formatC(c);
+  $('julia-c').textContent = label;
+  juliaCanvas.setAttribute('aria-label', `Julia set for the Mandelbrot view center, ${label}`);
 }
 
 function demoStatus(state) {
@@ -190,6 +240,7 @@ function showPanPreview() {
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(buffer, offset.x, offset.y, canvas.width, canvas.height);
   updateTelemetry();
+  drawJulia(true);
   if (playing) requestDraw();
   else schedulePanRender();
 }

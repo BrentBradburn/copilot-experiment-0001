@@ -30,6 +30,13 @@
             <div class="zoom-buttons"><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button></div>
           </div>
           <div class="canvas-hint">DRAG TO PAN <span>·</span> SCROLL OR CLICK TO ZOOM</div>
+          <div class="julia-view" aria-label="Corresponding Julia set">
+            <canvas id="julia" aria-label="Live Julia set for the center of the Mandelbrot view"></canvas>
+            <div class="julia-meta">
+              <span><i></i> LIVE JULIA</span>
+              <strong id="julia-c">c = −0.743644 + 0.131826i</strong>
+            </div>
+          </div>
         </section>
         <aside class="controls" aria-label="Explorer controls">
           <div class="panel-heading"><h2>Your expedition</h2><span>01 / ∞</span></div>
@@ -69,7 +76,7 @@
         <div><span>STATUS</span><strong id="status"><i></i> Ready to explore</strong></div>
       </section>
       <footer id="about">
-        <div><span class="footer-symbol">z² + c</span><p>The Mandelbrot set: a boundary of infinite complexity.<br>Every zoom reveals something you’ve never seen before.</p></div>
+        <div><span class="footer-symbol">z² + c</span><p>The Mandelbrot set: a boundary of infinite complexity.<br>Every zoom reveals something you’ve never seen before.<br>The smaller view is the Julia set for that center.</p></div>
         <span>Built with math. Made for curiosity.</span>
       </footer>
     </main>
