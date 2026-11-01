@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeTime, pointAt, zoomAt, panBy, panOffset, renderPixels, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, DEMO_DWELL_SECONDS } from './mandelbrot.js';
+import { escapeTime, juliaEscapeTime, pointAt, zoomAt, panBy, panOffset, renderPixels, renderJuliaPixels, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS } from './mandelbrot.js';
 
 test('known interior points remain bounded and exterior points escape', () => {
   for (const [x, y] of [[0, 0], [-1, 0], [-0.5, 0.5]]) assert.equal(escapeTime(x, y, 240), -1);
@@ -148,6 +148,43 @@ test('demo ignores empty time steps and starts on a known point', () => {
   const paused = stepDemo(state, 0, 1).state;
   assert.equal(paused, state);
   assert.equal(stepDemo(state, 1, 0).state, state);
+});
+
+test('Julia escape follows z² + c and does not use the Mandelbrot interior shortcut', () => {
+  assert.equal(juliaEscapeTime(0, 0, 0, 0, 40), -1);
+  assert.equal(juliaEscapeTime(0.5, 0, 0, 0, 40), -1);
+  assert.ok(juliaEscapeTime(1.5, 0, 0, 0, 40) > 0);
+  assert.equal(juliaEscapeTime(0, 0, -0.75, 0, 80), -1);
+  assert.ok(juliaEscapeTime(0, 0, 0.5, 0, 40) > 0);
+  assert.ok(juliaEscapeTime(-0.1, 0.1, 0, 0, 40) < 0);
+});
+
+test('corresponding Julia uses the Mandelbrot view center', () => {
+  const view = { ...destinations.seahorse, span: 1e-6 };
+  assert.deepEqual(correspondingC(view), { x: destinations.seahorse.x, y: destinations.seahorse.y });
+  assert.equal(JULIA_SPAN, 4);
+  const seahorse = new Uint8ClampedArray(24 * 24 * 4);
+  const other = new Uint8ClampedArray(24 * 24 * 4);
+  renderJuliaPixels(seahorse, 24, 24, correspondingC(view), 180, palettes.aurora);
+  renderJuliaPixels(other, 24, 24, { x: 0.28, y: -0.52 }, 180, palettes.aurora);
+  assert.notDeepEqual(seahorse, other);
+  const colors = new Set();
+  for (let offset = 0; offset < seahorse.length; offset += 4) {
+    assert.equal(seahorse[offset + 3], 255);
+    colors.add(`${seahorse[offset]},${seahorse[offset + 1]},${seahorse[offset + 2]}`);
+  }
+  assert.ok(colors.size > 8, 'the Julia set for the default center should show structure');
+});
+
+test('Julia rendering shows the filled set for c = 0 inside a fixed window', () => {
+  const pixels = new Uint8ClampedArray(5 * 5 * 4);
+  renderJuliaPixels(pixels, 5, 5, { x: 0, y: 0 }, 30, palettes.ocean);
+  assert.deepEqual([...pixels.slice(12 * 4, 13 * 4)], [5, 9, 18, 255]);
+  assert.notDeepEqual([...pixels.slice(0, 4)], [5, 9, 18, 255]);
+  const outside = new Uint8ClampedArray(4);
+  renderJuliaPixels(outside, 1, 1, { x: 1, y: 1 }, 40, palettes.ember, 0.2);
+  assert.equal(outside[3], 255);
+  assert.notDeepEqual([...outside], [5, 9, 18, 255]);
 });
 
 test('default destination retains visible structure at deep zoom', () => {

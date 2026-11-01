@@ -23,6 +23,12 @@ export const palettes = {
   ocean: [[3, 14, 43], [18, 50, 116], [27, 109, 187], [68, 188, 220], [224, 247, 255], [73, 111, 175]],
 };
 
+export const JULIA_SPAN = 4;
+
+export function correspondingC(view) {
+  return { x: view.x, y: view.y };
+}
+
 export function escapeTime(cx, cy, limit) {
   const q = (cx - 0.25) ** 2 + cy * cy;
   if (q * (q + cx - 0.25) <= 0.25 * cy * cy || (cx + 1) ** 2 + cy * cy <= 0.0625) return -1;
@@ -135,6 +141,36 @@ export function stepDemo(state, elapsed, speed = 1, random = Math.random) {
   return { state: current, relocated };
 }
 
+function paintSample(pixels, offset, value, palette) {
+  if (value < 0) {
+    pixels[offset] = 5;
+    pixels[offset + 1] = 9;
+    pixels[offset + 2] = 18;
+  } else {
+    const position = (Math.log1p(value) * 2.5) % palette.length;
+    const index = Math.floor(position);
+    const blend = position - index;
+    for (let channel = 0; channel < 3; channel++) {
+      pixels[offset + channel] = Math.round(palette[index][channel] * (1 - blend) + palette[(index + 1) % palette.length][channel] * blend);
+    }
+  }
+  pixels[offset + 3] = 255;
+}
+
+export function juliaEscapeTime(zx, zy, cx, cy, limit) {
+  let x = zx;
+  let y = zy;
+  let count = 0;
+  while (x * x + y * y <= 4 && count < limit) {
+    const nextX = x * x - y * y + cx;
+    y = 2 * x * y + cy;
+    x = nextX;
+    count++;
+  }
+  if (count === limit) return -1;
+  return count + 1 - Math.log2(Math.log2(x * x + y * y) / 2);
+}
+
 export function renderPixels(pixels, width, height, view, limit, palette) {
   const step = view.span / width;
   const left = view.x - view.span / 2;
@@ -142,20 +178,19 @@ export function renderPixels(pixels, width, height, view, limit, palette) {
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const value = escapeTime(left + (col + 0.5) * step, top - (row + 0.5) * step, limit);
-      const offset = (row * width + col) * 4;
-      if (value < 0) {
-        pixels[offset] = 5;
-        pixels[offset + 1] = 9;
-        pixels[offset + 2] = 18;
-      } else {
-        const position = (Math.log1p(value) * 2.5) % palette.length;
-        const index = Math.floor(position);
-        const blend = position - index;
-        for (let channel = 0; channel < 3; channel++) {
-          pixels[offset + channel] = Math.round(palette[index][channel] * (1 - blend) + palette[(index + 1) % palette.length][channel] * blend);
-        }
-      }
-      pixels[offset + 3] = 255;
+      paintSample(pixels, (row * width + col) * 4, value, palette);
+    }
+  }
+}
+
+export function renderJuliaPixels(pixels, width, height, c, limit, palette, span = JULIA_SPAN) {
+  const step = span / width;
+  const left = -span / 2;
+  const top = span * height / width / 2;
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const value = juliaEscapeTime(left + (col + 0.5) * step, top - (row + 0.5) * step, c.x, c.y, limit);
+      paintSample(pixels, (row * width + col) * 4, value, palette);
     }
   }
 }

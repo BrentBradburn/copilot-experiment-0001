@@ -1,7 +1,7 @@
 {
   "name": "copilot-experiment-0001",
   "version": "1.0.0",
-  "description": "An interactive, animated Mandelbrot explorer",
+  "description": "An interactive Mandelbrot explorer with a live corresponding Julia set",
   "scripts": {
     "start": "node server.js",
     "test": "node --test"

@@ -14,13 +14,19 @@ header { height: 88px; border-bottom: 1px solid #222735; display: flex; align-it
 .about-link:hover { color: var(--accent); }
 main { max-width: 1320px; margin: auto; padding: 48px 0 0; width: 90%; }
 .eyebrow { font-size: 10px; font-weight: 650; color: var(--accent); letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
-.eyebrow span, .live-badge i, #status i { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+.eyebrow span, .live-badge i, #status i, .julia-meta i { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
 h1 { font-size: clamp(38px, 5vw, 56px); letter-spacing: -2px; margin: 12px 0 8px; font-weight: 600; }
 .intro p { color: var(--muted); font-size: 15px; margin: 0 0 32px; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 304px; gap: 22px; }
 .viewer { position: relative; min-height: 520px; overflow: hidden; border: 1px solid #303847; border-radius: 14px; background: #050a14; }
-canvas { display: block; width: 100%; height: 100%; position: absolute; cursor: grab; touch-action: none; }
-canvas.panning { cursor: grabbing; }
+#fractal { display: block; width: 100%; height: 100%; position: absolute; cursor: grab; touch-action: none; }
+#fractal.panning { cursor: grabbing; }
+.julia-view { position: absolute; z-index: 2; top: 66px; left: 22px; width: 156px; pointer-events: none; }
+.julia-view canvas { display: block; position: static; width: 156px; height: 156px; border-radius: 8px; border: 1px solid #ffffff28; background: #050912; box-shadow: 0 10px 28px #00000066; }
+.julia-meta { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; background: #0c101bc9; border: 1px solid #ffffff20; border-radius: 6px; padding: 7px 8px; }
+.julia-meta span { font-size: 8px; letter-spacing: 1.2px; color: #d5e4f2; }
+.julia-meta i { margin-right: 6px; }
+.julia-meta strong { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; font-weight: 450; color: var(--accent); }
 .viewer-top, .viewer-bottom { position: absolute; left: 22px; right: 22px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
 .viewer-top { top: 20px; }
 .viewer-bottom { bottom: 20px; }
@@ -84,6 +90,8 @@ footer p { line-height: 1.8; margin: 0; }
   main { padding-top: 30px; }
   .workspace { grid-template-columns: 1fr; }
   .viewer { min-height: 380px; }
+  .julia-view { width: 112px; top: 58px; left: 14px; }
+  .julia-view canvas { width: 112px; height: 112px; }
   .telemetry { grid-template-columns: 1fr 1fr; gap: 20px 0; }
   .telemetry > div:nth-child(2) { border: 0; }
   footer { align-items: flex-start; gap: 20px; flex-direction: column; }
