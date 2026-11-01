@@ -17,6 +17,7 @@ let drag = null;
 let suppressClick = false;
 let rendered = null;
 let panRenderTimer = 0;
+let fullQualityPanRender = false;
 const PAN_THRESHOLD = 3;
 
 function updateTelemetry() {
@@ -32,7 +33,7 @@ function draw() {
   if (!bounds.width || !bounds.height) return;
   const aspect = bounds.width / bounds.height;
   const limit = Number($('iterations').value) + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
-  const maxPixels = Math.max(20000, Math.min(playing || dragging ? 130000 : 650000, Math.floor(MAX_WORK / limit)));
+  const maxPixels = Math.max(20000, Math.min(fullQualityPanRender ? 650000 : (playing || dragging ? 130000 : 650000), Math.floor(MAX_WORK / limit)));
   const width = Math.max(1, Math.floor(Math.min(bounds.width * Math.min(devicePixelRatio || 1, 2), Math.sqrt(maxPixels * aspect))));
   const height = Math.max(1, Math.floor(width / aspect));
   buffer.width = width;
@@ -48,6 +49,7 @@ function draw() {
   }
   context.drawImage(buffer, 0, 0, canvas.width, canvas.height);
   rendered = { x: view.x, y: view.y, span: view.span, width: canvas.width, height: canvas.height };
+  fullQualityPanRender = false;
   updateTelemetry();
 }
 
@@ -166,7 +168,10 @@ function schedulePanRender() {
   cancelPanRender();
   panRenderTimer = setTimeout(() => {
     panRenderTimer = 0;
-    if (dragging) requestDraw();
+    if (dragging) {
+      fullQualityPanRender = true;
+      requestDraw();
+    }
   }, 120);
 }
 
