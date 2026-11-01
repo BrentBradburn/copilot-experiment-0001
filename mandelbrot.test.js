@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeTime, juliaEscapeTime, pointAt, zoomAt, panBy, panOffset, renderPixels, renderJuliaPixels, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS } from './mandelbrot.js';
+import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderJuliaPixels, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS } from './mandelbrot.js';
 
 test('known interior points remain bounded and exterior points escape', () => {
   for (const [x, y] of [[0, 0], [-1, 0], [-0.5, 0.5]]) assert.equal(escapeTime(x, y, 240), -1);
@@ -61,6 +61,22 @@ test('dragging pans the view and the preview follows the pointer', () => {
 test('zoom clamps at the floating-point precision and overview limits', () => {
   assert.equal(zoomAt({ x: 0, y: 0, span: MIN_SPAN }, 0.1).span, MIN_SPAN);
   assert.equal(zoomAt({ x: 0, y: 0, span: INITIAL_SPAN }, 100).span, INITIAL_SPAN * 2);
+});
+
+test('continuous zoom in shrinks the span and zoom out expands it around the center', () => {
+  const view = { x: -0.5, y: 0.25, span: 1 };
+  const inward = zoomAt(view, continuousZoomFactor(0.2, 1, 'in'));
+  const outward = zoomAt(view, continuousZoomFactor(0.2, 1, 'out'));
+  assert.ok(inward.span < view.span);
+  assert.ok(outward.span > view.span);
+  assert.equal(inward.x, view.x);
+  assert.equal(inward.y, view.y);
+  assert.equal(outward.x, view.x);
+  assert.equal(outward.y, view.y);
+  assert.ok(Math.abs(inward.span * outward.span - view.span ** 2) < 1e-12);
+  assert.equal(continuousZoomFactor(0.2, 1), continuousZoomFactor(0.2, 1, 'in'));
+  assert.equal(zoomAt({ x: 0, y: 0, span: INITIAL_SPAN * 2 }, continuousZoomFactor(1, 3, 'out')).span, INITIAL_SPAN * 2);
+  assert.equal(zoomAt({ x: 1, y: 1, span: MIN_SPAN }, continuousZoomFactor(1, 3, 'in')).span, MIN_SPAN);
 });
 
 test('all palettes produce opaque pixels and distinguish interior from exterior', () => {

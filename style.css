@@ -57,8 +57,12 @@ input[type="range"] { width: 100%; margin: 6px 0; accent-color: var(--accent); c
 .palette-preview { height: 6px; margin: 12px 0 24px; border-radius: 5px; background: linear-gradient(90deg, #0a183b, #136d8a, #71dbc2, #ffe0a0); }
 .palette-preview[data-palette="ember"] { background: linear-gradient(90deg, #15103e, #7828a0, #ea5b5a, #ffd69b); }
 .palette-preview[data-palette="ocean"] { background: linear-gradient(90deg, #030e2b, #174caa, #47b2dc, #e0f7ff); }
+.play-buttons { display: flex; gap: 8px; }
+.play-buttons .primary-button { flex: 1; width: auto; min-width: 0; padding: 13px 6px; white-space: nowrap; }
 .primary-button { width: 100%; background: var(--accent); color: #0a3029; border: none; border-radius: 7px; padding: 13px; font-size: 12px; font-weight: 750; }
 .primary-button:hover { background: #a1f0d9; }
+.play-buttons .primary-button[aria-pressed="true"] { background: #0a3029; color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.play-buttons .primary-button[aria-pressed="true"]:hover { background: #123f35; }
 .reset-button { display: block; width: 100%; border: 1px solid #30394a; background: transparent; color: #b2bdd0; border-radius: 7px; font-size: 11px; padding: 11px; margin-top: 10px; }
 .reset-button:hover { background: #202b3c; }
 #demo[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }

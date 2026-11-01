@@ -63,10 +63,13 @@
             <option value="ocean">Ocean · deep blue & ice</option>
           </select>
           <div class="palette-preview" id="palette-preview" aria-hidden="true"></div>
-          <button id="play" class="primary-button" aria-pressed="false">▶ Start zooming</button>
+          <div class="play-buttons" role="group" aria-label="Animated zoom">
+            <button id="play-in" class="primary-button" aria-pressed="false" aria-label="Start zooming in">▶ Zoom in</button>
+            <button id="play-out" class="primary-button" aria-pressed="false" aria-label="Start zooming out">▶ Zoom out</button>
+          </div>
           <button id="demo" class="reset-button" aria-pressed="false">Start demo</button>
           <button id="reset" class="reset-button">↺ Reset view</button>
-          <p class="keyboard-hint"><kbd>Space</kbd> to play or pause</p>
+          <p id="keyboard-hint" class="keyboard-hint"><kbd>Space</kbd> to play or pause</p>
         </aside>
       </div>
       <section class="telemetry" aria-label="Current view">

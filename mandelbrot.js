@@ -55,6 +55,11 @@ export function zoomAt(view, factor, u = 0.5, v = 0.5, aspect = 1) {
   return { x: anchor.x - (u - 0.5) * span, y: anchor.y - (0.5 - v) * span / aspect, span };
 }
 
+export function continuousZoomFactor(elapsed, speed, direction = 'in') {
+  const outward = direction === 'out';
+  return Math.exp((outward ? elapsed : -elapsed) * speed * ZOOM_RATE);
+}
+
 export function panBy(view, du, dv, aspect = 1) {
   return { x: view.x - du * view.span, y: view.y + dv * view.span / aspect, span: view.span };
 }
