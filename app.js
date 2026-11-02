@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, detailIterations } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -49,8 +49,18 @@ function displayScale() {
   return Math.min(devicePixelRatio || 1, 2);
 }
 
+function selectedIterations() {
+  return detailIterations($('iterations').value);
+}
+
+function syncDetailLevel() {
+  const iterations = selectedIterations();
+  $('iterations-value').textContent = String(iterations);
+  $('iterations').setAttribute('aria-valuetext', `${iterations} iterations`);
+}
+
 function iterationLimit() {
-  return Number($('iterations').value) + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
+  return selectedIterations() + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
 }
 
 function polishSamples() {
@@ -68,7 +78,7 @@ function isPolishedCurrent() {
   const height = Math.round(bounds.height * displayScale());
   return sameView(polishedFrame)
     && polishedFrame.palette === $('palette').value
-    && polishedFrame.iterations === Number($('iterations').value)
+    && polishedFrame.iterations === selectedIterations()
     && polishedFrame.width === canvas.width
     && polishedFrame.height === canvas.height
     && canvas.width === width
@@ -136,7 +146,7 @@ function drawJulia(throttled = false) {
   const c = correspondingC(view);
   const polishedNow = isPolishedCurrent();
   const samples = polishedNow ? polishedFrame.samples : 1;
-  const limit = Math.min(Number($('iterations').value), playing || dragging ? 100 : 220);
+  const limit = Math.min(selectedIterations(), playing || dragging ? 100 : 220);
   const quality = polishedNow ? `polish-${samples}` : (playing || dragging ? 'low' : 'high');
   const key = `${c.x},${c.y},${limit},${quality},${$('palette').value},${bounds.width},${bounds.height}`;
   if (key === juliaKey) return;
@@ -401,7 +411,7 @@ function startPolish() {
   const samples = polishSamples();
   const paletteName = $('palette').value;
   const palette = palettes[paletteName];
-  const iterations = Number($('iterations').value);
+  const iterations = selectedIterations();
   const snapshot = { x: view.x, y: view.y, span: view.span };
   const width = Math.max(1, Math.round(bounds.width * displayScale()));
   const height = Math.max(1, Math.round(bounds.height * displayScale()));
@@ -620,7 +630,7 @@ $('speed').addEventListener('input', () => {
   $('speed-value').textContent = `${Number($('speed').value).toFixed(1)}×`;
 });
 $('iterations').addEventListener('input', () => {
-  $('iterations-value').textContent = $('iterations').value;
+  syncDetailLevel();
   cancelPolish();
   requestDraw();
 });
@@ -729,6 +739,7 @@ document.addEventListener('fullscreenchange', syncFullscreenPolish);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && playing) setPlaying(false);
 });
+syncDetailLevel();
 new ResizeObserver(requestDraw).observe(canvas);
 const demoQuery = new URLSearchParams(location.search).get('demo');
 if (demoQuery !== null && demoQuery !== '0' && demoQuery !== 'false') beginDemo();

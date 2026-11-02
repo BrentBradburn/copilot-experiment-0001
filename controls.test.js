@@ -94,6 +94,25 @@ test('fullscreen viewer keeps polish and save on the image', async () => {
   assert.match(css, /\.polish-progress\s*\{[^}]*visibility:\s*hidden/);
 });
 
+test('detail level slider has 15 power-of-two positions from 1 to 16384', async () => {
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  const slider = html.match(/<input id="iterations" type="range"[^>]*>/);
+  assert.ok(slider, 'detail level should remain a range slider');
+  assert.match(slider[0], /min="0"/);
+  assert.match(slider[0], /max="14"/);
+  assert.match(slider[0], /step="1"/);
+  assert.match(slider[0], /value="8"/);
+  assert.match(slider[0], /aria-valuetext="256 iterations"/);
+  assert.match(html, /id="iterations-value"[^>]*>256</);
+  assert.equal(html.includes('min="80"'), false);
+  assert.equal(html.includes('max="800"'), false);
+  assert.match(app, /function selectedIterations\(\) \{\s*return detailIterations\(\$\('iterations'\)\.value\);/);
+  assert.match(app, /function iterationLimit\(\) \{\s*return selectedIterations\(\)/);
+  assert.match(app, /\$\('iterations-value'\)\.textContent = String\(iterations\)/);
+  assert.equal(app.includes("Number($('iterations').value)"), false);
+});
+
 test('status panel stays directly under the render panel', async () => {
   const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
   const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');

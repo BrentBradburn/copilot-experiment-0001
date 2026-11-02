@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderPixelRows, renderJuliaPixels, renderJuliaPixelRows, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS, normalizeSamples, formatArtworkMark, parseArtworkMark } from './mandelbrot.js';
+import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderPixelRows, renderJuliaPixels, renderJuliaPixelRows, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS, normalizeSamples, formatArtworkMark, parseArtworkMark, detailIterations, DETAIL_MIN_EXPONENT, DETAIL_MAX_EXPONENT, DETAIL_DEFAULT_EXPONENT } from './mandelbrot.js';
 
 test('known interior points remain bounded and exterior points escape', () => {
   for (const [x, y] of [[0, 0], [-1, 0], [-0.5, 0.5]]) assert.equal(escapeTime(x, y, 240), -1);
@@ -279,4 +279,22 @@ test('default destination retains visible structure at deep zoom', () => {
     colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
   }
   assert.ok(colors.size > 20, 'deep zoom should not collapse to a single color');
+});
+
+test('detail level is 15 power-of-two stops from 2^0 through 2^14', () => {
+  assert.equal(DETAIL_MIN_EXPONENT, 0);
+  assert.equal(DETAIL_MAX_EXPONENT, 14);
+  assert.equal(DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT + 1, 15);
+  assert.equal(DETAIL_DEFAULT_EXPONENT, 8);
+  const values = [];
+  for (let exponent = DETAIL_MIN_EXPONENT; exponent <= DETAIL_MAX_EXPONENT; exponent++) {
+    values.push(detailIterations(exponent));
+    assert.equal(detailIterations(exponent), 2 ** exponent);
+  }
+  assert.deepEqual(values, [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]);
+  assert.equal(detailIterations(DETAIL_DEFAULT_EXPONENT), 256);
+  assert.equal(detailIterations(-4), 1);
+  assert.equal(detailIterations(20), 16384);
+  assert.equal(detailIterations(7.4), 128);
+  assert.equal(detailIterations('nope'), 256);
 });
