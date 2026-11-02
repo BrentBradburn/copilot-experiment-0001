@@ -180,6 +180,29 @@ export function normalizeSamples(samples) {
   return Math.min(count, 8);
 }
 
+const EXACT_NUMBER = '[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?';
+const UNSIGNED_NUMBER = '(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?';
+
+function formatExact(value) {
+  if (Object.is(value, -0)) return '-0';
+  return value.toString();
+}
+
+export function formatArtworkMark(view) {
+  const yNegative = view.y < 0 || Object.is(view.y, -0);
+  const text = `${formatExact(view.x)} ${yNegative ? '-' : '+'} ${formatExact(Math.abs(view.y))}i`;
+  return { text };
+}
+
+export function parseArtworkMark(text) {
+  const match = String(text).trim().match(new RegExp(`^(${EXACT_NUMBER}) ([+-]) (${UNSIGNED_NUMBER})i$`));
+  if (!match) return null;
+  const x = Number(match[1]);
+  const y = match[2] === '-' ? -Number(match[3]) : Number(match[3]);
+  if (![x, y].every(Number.isFinite)) return null;
+  return { x, y };
+}
+
 function paintAveraged(pixels, offset, values, palette) {
   const first = values[0];
   for (let index = 1; index < values.length; index++) {

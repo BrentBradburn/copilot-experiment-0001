@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -81,6 +81,14 @@ function updateTelemetry() {
   $('real-axis').textContent = view.x.toFixed(10);
   $('imaginary-axis').textContent = view.y.toFixed(10);
   $('status').replaceChildren(document.createElement('i'), document.createTextNode(status));
+  refreshWatermarkPreview();
+}
+
+function refreshWatermarkPreview() {
+  const preview = $('watermark-preview');
+  const enabled = $('watermark').checked;
+  preview.hidden = !enabled;
+  preview.textContent = enabled ? formatArtworkMark(polishedFrame || view).text : '';
 }
 
 function draw() {
@@ -196,6 +204,7 @@ function updateControls() {
   polishButton.setAttribute('aria-label', polishing ? 'Cancel polished render' : 'Polish this view into a full-resolution frame');
   $('save-frame').disabled = polishing || !polishedFrame;
   canvas.parentElement.setAttribute('aria-busy', String(polishing));
+  canvas.parentElement.classList.toggle('signed', Boolean(polishedFrame) && !polishing && $('watermark').checked);
   const badge = polishing ? ' POLISHING' : polishedFrame ? ' POLISHED' : demo ? ' DEMO' : ' LIVE RENDER';
   $('live-badge').replaceChildren(document.createElement('i'), document.createTextNode(badge));
 }
@@ -499,13 +508,60 @@ function startPolish() {
     status = 'Polished frame';
     updateControls();
     updateTelemetry();
+    syncArtworkMark();
   };
   requestAnimationFrame(step);
 }
 
+function paintArtworkMark(ctx, width, height, frame) {
+  const text = formatArtworkMark(frame).text;
+  const bounds = canvas.getBoundingClientRect();
+  const scale = width === canvas.width && bounds.width ? width / bounds.width : displayScale();
+  let fontSize = Math.max(11, Math.round(13 * scale));
+  const padX = Math.round(22 * scale);
+  const padY = Math.round(22 * scale);
+  const maxWidth = Math.max(40, width - padX - Math.round(108 * scale));
+  ctx.save();
+  ctx.font = `italic ${fontSize}px Georgia, "Palatino Linotype", Palatino, serif`;
+  while (fontSize > 8 && ctx.measureText(text).width > maxWidth) {
+    fontSize -= 1;
+    ctx.font = `italic ${fontSize}px Georgia, "Palatino Linotype", Palatino, serif`;
+  }
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.shadowColor = 'rgba(5, 8, 16, 0.45)';
+  ctx.shadowBlur = fontSize * 0.9;
+  ctx.shadowOffsetY = Math.max(1, Math.round(fontSize * 0.06));
+  ctx.fillStyle = 'rgba(244, 236, 220, 0.5)';
+  ctx.fillText(text, padX, height - padY);
+  ctx.restore();
+}
+
+function syncArtworkMark() {
+  refreshWatermarkPreview();
+  const signed = Boolean(polishedFrame) && !polishing && $('watermark').checked;
+  canvas.parentElement.classList.toggle('signed', signed);
+  if (polishing || !polishedFrame) return;
+  if (polishBuffer.width !== canvas.width || polishBuffer.height !== canvas.height) return;
+  context.drawImage(polishBuffer, 0, 0);
+  if ($('watermark').checked) paintArtworkMark(context, canvas.width, canvas.height, polishedFrame);
+}
+
+function artworkCanvas() {
+  if (!$('watermark').checked) return canvas;
+  const copy = document.createElement('canvas');
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  const ctx = copy.getContext('2d');
+  const clean = polishBuffer.width === canvas.width && polishBuffer.height === canvas.height ? polishBuffer : canvas;
+  ctx.drawImage(clean, 0, 0);
+  paintArtworkMark(ctx, copy.width, copy.height, polishedFrame || view);
+  return copy;
+}
+
 function saveArtwork() {
   if ($('save-frame').disabled) return;
-  canvas.toBlob((blob) => {
+  artworkCanvas().toBlob((blob) => {
     if (!blob) {
       status = 'Unable to save artwork';
       updateTelemetry();
@@ -585,6 +641,7 @@ $('polish').addEventListener('click', () => {
   startPolish();
 });
 $('save-frame').addEventListener('click', saveArtwork);
+$('watermark').addEventListener('change', syncArtworkMark);
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
   const { u, v } = pointerFractions(event);

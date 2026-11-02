@@ -40,6 +40,38 @@ test('polished render is an in-place control with quality and artwork save', asy
   assert.equal(app.includes('zoomAt(view, 1)'), false);
 });
 
+test('polished artwork signs the lower-left with a complex coordinate by default', async () => {
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  const panel = html.match(/<div id="polish-panel" class="polish-panel">[\s\S]*?<\/div>\s*<p id="keyboard-hint"/);
+  assert.ok(panel, 'watermark option should live with the polish controls');
+  assert.match(panel[0], /id="watermark" type="checkbox" checked/);
+  assert.match(panel[0], /Location watermark/);
+  assert.match(panel[0], /id="watermark-preview" class="watermark-preview" hidden/);
+  assert.match(css, /\.check-row\s*\{[^}]*display:\s*flex/);
+  assert.match(css, /\.watermark-preview\s*\{[^}]*font-style:\s*italic/);
+  assert.match(css, /\.viewer\.signed #location-label/);
+  assert.match(app, /formatArtworkMark\(polishedFrame \|\| view\)/);
+  assert.match(app, /function paintArtworkMark\(/);
+  assert.match(app, /ctx\.textAlign = 'left'/);
+  assert.match(app, /ctx\.textBaseline = 'bottom'/);
+  assert.match(app, /italic \$\{fontSize\}px Georgia/);
+  assert.match(app, /function syncArtworkMark\(/);
+  assert.match(app, /classList\.toggle\('signed', signed\)/);
+  assert.match(app, /if \(\$\('watermark'\)\.checked\) paintArtworkMark\(context/);
+  assert.match(app, /\$\('watermark'\)\.addEventListener\('change', syncArtworkMark\)/);
+  const save = app.match(/function saveArtwork\(\) \{[\s\S]*?\n\}/);
+  assert.ok(save, 'save should stay a single function');
+  assert.equal(save[0].includes('view ='), false);
+  assert.match(save[0], /artworkCanvas\(\)\.toBlob/);
+  const exportCopy = app.match(/function artworkCanvas\(\) \{[\s\S]*?\n\}/);
+  assert.ok(exportCopy, 'watermarked export should be a copy');
+  assert.match(exportCopy[0], /if \(!\$\('watermark'\)\.checked\) return canvas/);
+  assert.match(exportCopy[0], /paintArtworkMark\(ctx, copy\.width, copy\.height, polishedFrame \|\| view\)/);
+  assert.equal(exportCopy[0].includes('view ='), false);
+});
+
 test('fullscreen viewer keeps polish and save on the image', async () => {
   const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
   const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
