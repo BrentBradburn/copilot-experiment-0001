@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, formatCoordinate, parseCoordinate, coordinatesFromEntry } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -75,13 +75,73 @@ function isPolishedCurrent() {
     && canvas.height === height;
 }
 
+let coordinateError = null;
+
+function formatAxis(value) {
+  const exact = formatCoordinate(value);
+  const fixed = value.toFixed(10);
+  if (value !== 0 && Number(fixed) === 0) return exact;
+  return fixed;
+}
+
 function updateTelemetry() {
   const zoom = INITIAL_SPAN / view.span;
   $('magnification').textContent = `${zoom >= 100000 ? zoom.toExponential(2) : zoom.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}×`;
-  $('real-axis').textContent = view.x.toFixed(10);
-  $('imaginary-axis').textContent = view.y.toFixed(10);
+  $('real-axis').textContent = formatAxis(view.x);
+  $('imaginary-axis').textContent = formatAxis(view.y);
+  $('real-axis').title = formatCoordinate(view.x);
+  $('imaginary-axis').title = formatCoordinate(view.y);
   $('status').replaceChildren(document.createElement('i'), document.createTextNode(status));
+  syncCoordinateInputs();
   refreshWatermarkPreview();
+}
+
+function syncCoordinateInputs() {
+  const errorStillCurrent = coordinateError
+    && coordinateError.x === view.x
+    && coordinateError.y === view.y
+    && coordinateError.span === view.span;
+  if (!errorStillCurrent) coordinateError = null;
+  for (const [id, value] of [['coordinate-real', view.x], ['coordinate-imag', view.y]]) {
+    const input = $(id);
+    if (document.activeElement === input) continue;
+    if (errorStillCurrent && input.getAttribute('aria-invalid') === 'true') continue;
+    input.removeAttribute('aria-invalid');
+    const text = formatCoordinate(value);
+    if (input.value !== text) input.value = text;
+  }
+}
+
+function applyCoordinates() {
+  const realInput = $('coordinate-real');
+  const imagInput = $('coordinate-imag');
+  const entered = coordinatesFromEntry(realInput.value, imagInput.value);
+  if (!entered) {
+    coordinateError = { x: view.x, y: view.y, span: view.span };
+    realInput.setAttribute('aria-invalid', String(parseCoordinate(realInput.value) === null));
+    imagInput.setAttribute('aria-invalid', String(parseCoordinate(imagInput.value) === null));
+    status = 'Enter real and imaginary coordinates';
+    $('status').replaceChildren(document.createElement('i'), document.createTextNode(status));
+    return;
+  }
+  coordinateError = null;
+  realInput.removeAttribute('aria-invalid');
+  imagInput.removeAttribute('aria-invalid');
+  if (Object.is(entered.x, view.x) && Object.is(entered.y, view.y)) {
+    syncCoordinateInputs();
+    return;
+  }
+  cancelPolish();
+  releaseDemo();
+  playing = false;
+  lastTime = 0;
+  view = { x: entered.x, y: entered.y, span: view.span };
+  realInput.value = formatCoordinate(entered.x);
+  imagInput.value = formatCoordinate(entered.y);
+  $('location-label').textContent = 'Custom coordinates';
+  status = view.span <= MIN_SPAN ? 'Precision limit reached' : 'Paused';
+  updateControls();
+  requestDraw();
 }
 
 function refreshWatermarkPreview() {
@@ -614,6 +674,16 @@ $('demo').addEventListener('click', () => {
 });
 $('reset').addEventListener('click', resetView);
 $('destination').addEventListener('change', resetView);
+function submitCoordinates(event) {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  applyCoordinates();
+}
+$('coordinate-real').addEventListener('keydown', submitCoordinates);
+$('coordinate-imag').addEventListener('keydown', submitCoordinates);
+$('coordinate-real').addEventListener('input', (event) => event.currentTarget.removeAttribute('aria-invalid'));
+$('coordinate-imag').addEventListener('input', (event) => event.currentTarget.removeAttribute('aria-invalid'));
+$('go-coordinates').addEventListener('click', applyCoordinates);
 $('zoom-in').addEventListener('click', () => manualZoom(0.5));
 $('zoom-out').addEventListener('click', () => manualZoom(2));
 $('speed').addEventListener('input', () => {
