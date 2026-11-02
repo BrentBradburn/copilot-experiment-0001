@@ -77,18 +77,20 @@
           </div>
           <button id="demo" class="reset-button" aria-pressed="false">Start demo</button>
           <button id="reset" class="reset-button">↺ Reset view</button>
-          <div class="separator"></div>
-          <label for="polish-samples">FRAME QUALITY</label>
-          <select id="polish-samples">
-            <option value="1">Full resolution</option>
-            <option value="2" selected>Balanced · 2×2 samples</option>
-            <option value="3">Fine · 3×3 samples</option>
-            <option value="4">Artwork · 4×4 samples</option>
-          </select>
-          <p class="field-note">Renders this view in place at screen resolution. Extra samples smooth aliasing.</p>
-          <button id="polish" class="polish-button" aria-pressed="false" aria-label="Polish this view into a full-resolution frame">✦ Polish frame</button>
-          <div id="polish-progress" class="polish-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Polished render progress" aria-hidden="true"><span id="polish-progress-bar"></span></div>
-          <button id="save-frame" class="reset-button" disabled>Save artwork</button>
+          <div id="polish-panel" class="polish-panel">
+            <div class="separator"></div>
+            <label for="polish-samples">FRAME QUALITY</label>
+            <select id="polish-samples">
+              <option value="1">Full resolution</option>
+              <option value="2" selected>Balanced · 2×2 samples</option>
+              <option value="3">Fine · 3×3 samples</option>
+              <option value="4">Artwork · 4×4 samples</option>
+            </select>
+            <p class="field-note">Renders this view in place at screen resolution. Extra samples smooth aliasing.</p>
+            <button id="polish" class="polish-button" aria-pressed="false" aria-label="Polish this view into a full-resolution frame">✦ Polish frame</button>
+            <div id="polish-progress" class="polish-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Polished render progress" aria-hidden="true"><span id="polish-progress-bar"></span></div>
+            <button id="save-frame" class="reset-button" disabled>Save artwork</button>
+          </div>
           <p id="keyboard-hint" class="keyboard-hint"><kbd>Space</kbd> to play or pause</p>
         </aside>
       </div>

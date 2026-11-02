@@ -644,6 +644,21 @@ document.addEventListener('keydown', (event) => {
   event.preventDefault();
   togglePlaying();
 });
+const polishPanel = $('polish-panel');
+const polishHome = polishPanel.parentElement;
+const polishNext = polishPanel.nextElementSibling;
+
+function syncFullscreenPolish() {
+  const viewer = canvas.parentElement;
+  if (document.fullscreenElement === viewer) {
+    polishPanel.classList.add('overlay');
+    viewer.appendChild(polishPanel);
+    return;
+  }
+  polishHome.insertBefore(polishPanel, polishNext);
+  polishPanel.classList.remove('overlay');
+}
+
 $('fullscreen').addEventListener('click', async () => {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
@@ -653,6 +668,7 @@ $('fullscreen').addEventListener('click', async () => {
     updateTelemetry();
   }
 });
+document.addEventListener('fullscreenchange', syncFullscreenPolish);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && playing) setPlaying(false);
 });
