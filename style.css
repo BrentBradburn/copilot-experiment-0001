@@ -74,6 +74,13 @@ input[type="range"] { width: 100%; margin: 6px 0; accent-color: var(--accent); c
 .polish-progress { height: 3px; margin-top: 8px; background: #2a3140; border-radius: 3px; overflow: hidden; visibility: hidden; }
 .polish-progress[aria-hidden="false"] { visibility: visible; }
 .polish-progress span { display: block; height: 100%; width: 0; background: var(--accent); }
+.polish-panel.overlay { position: absolute; z-index: 4; top: 72px; right: 22px; width: min(260px, calc(100% - 44px)); max-height: calc(100% - 160px); overflow: auto; padding: 14px 14px 12px; background: #0c101be6; border: 1px solid #ffffff28; border-radius: 10px; box-shadow: 0 10px 28px #00000066; pointer-events: auto; }
+.polish-panel.overlay .separator { display: none; }
+.polish-panel.overlay .field-note { color: #c5d0e2; }
+.polish-panel.overlay .polish-button:hover { background: #123f35; }
+.polish-panel.overlay .polish-button[aria-pressed="true"] { background: #0a3029; }
+.polish-panel.overlay .reset-button:hover { background: #202b3c; }
+.polish-panel.overlay .reset-button:disabled:hover { background: transparent; }
 #demo[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .keyboard-hint { text-align: center; color: #6f7e98; font-size: 9px; margin: 14px 0 0; }
 kbd { font: inherit; border: 1px solid #394357; padding: 2px 5px; border-radius: 3px; margin-right: 4px; }
@@ -107,6 +114,7 @@ footer p { line-height: 1.8; margin: 0; }
   main { padding-top: 30px; }
   .workspace { grid-template-columns: 1fr; }
   .viewer { min-height: 380px; }
+  .polish-panel.overlay { top: auto; bottom: 68px; left: 14px; right: 14px; width: auto; max-height: 46%; }
   .julia-view { width: 112px; top: 58px; left: 14px; }
   .julia-view canvas { width: 112px; height: 112px; }
   .telemetry { grid-template-columns: 1fr 1fr; gap: 20px 0; }

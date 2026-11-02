@@ -40,6 +40,28 @@ test('polished render is an in-place control with quality and artwork save', asy
   assert.equal(app.includes('zoomAt(view, 1)'), false);
 });
 
+test('fullscreen viewer keeps polish and save on the image', async () => {
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  const controls = html.match(/<aside class="controls"[\s\S]*?<\/aside>/);
+  assert.ok(controls, 'normal viewing panel should still own the polish controls');
+  const panel = controls[0].match(/<div id="polish-panel" class="polish-panel">[\s\S]*?<\/div>\s*<p id="keyboard-hint"/);
+  assert.ok(panel, 'polish controls should be one movable panel');
+  assert.match(panel[0], /id="polish-samples"/);
+  assert.match(panel[0], /id="polish"[\s\S]*Polish frame/);
+  assert.match(panel[0], /id="polish-progress"[\s\S]*aria-hidden="true"/);
+  assert.match(panel[0], /id="save-frame"[\s\S]*Save artwork/);
+  assert.match(app, /function syncFullscreenPolish\(/);
+  assert.match(app, /document\.fullscreenElement === viewer/);
+  assert.match(app, /polishPanel\.classList\.add\('overlay'\)/);
+  assert.match(app, /viewer\.appendChild\(polishPanel\)/);
+  assert.match(app, /polishHome\.insertBefore\(polishPanel, polishNext\)/);
+  assert.match(app, /document\.addEventListener\('fullscreenchange', syncFullscreenPolish\)/);
+  assert.match(css, /\.polish-panel\.overlay\s*\{[^}]*position:\s*absolute/);
+  assert.match(css, /\.polish-progress\s*\{[^}]*visibility:\s*hidden/);
+});
+
 test('status panel stays directly under the render panel', async () => {
   const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
   const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
