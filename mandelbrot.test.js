@@ -311,27 +311,27 @@ test('default destination retains visible structure at deep zoom', () => {
   assert.ok(colors.size > 20, 'deep zoom should not collapse to a single color');
 });
 
-test('detail level is 15 power-of-two stops from 2^0 through 2^14', () => {
+test('detail level is 17 power-of-two stops from 2^0 through 2^16', () => {
   assert.equal(DETAIL_MIN_EXPONENT, 0);
-  assert.equal(DETAIL_MAX_EXPONENT, 14);
-  assert.equal(DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT + 1, 15);
+  assert.equal(DETAIL_MAX_EXPONENT, 16);
+  assert.equal(DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT + 1, 17);
   assert.equal(DETAIL_DEFAULT_EXPONENT, 8);
   const values = [];
   for (let exponent = DETAIL_MIN_EXPONENT; exponent <= DETAIL_MAX_EXPONENT; exponent++) {
     values.push(detailIterations(exponent));
     assert.equal(detailIterations(exponent), 2 ** exponent);
   }
-  assert.deepEqual(values, [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]);
+  assert.deepEqual(values, [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]);
   assert.equal(detailIterations(DETAIL_DEFAULT_EXPONENT), 256);
   assert.equal(detailIterations(-4), 1);
-  assert.equal(detailIterations(20), 16384);
+  assert.equal(detailIterations(20), 65536);
   assert.equal(detailIterations(7.4), 128);
   assert.equal(detailIterations('nope'), 256);
   assert.equal(normalizeDetailIterations(256), 256);
-  assert.equal(normalizeDetailIterations(16384), 16384);
+  assert.equal(normalizeDetailIterations(65536), 65536);
   assert.equal(normalizeDetailIterations(1), 1);
   assert.equal(normalizeDetailIterations(240), 256);
-  assert.equal(normalizeDetailIterations(100000), 16384);
+  assert.equal(normalizeDetailIterations(100000), 65536);
   assert.equal(normalizeDetailIterations(0), 256);
   assert.equal(normalizeDetailIterations('nope'), 256);
   for (let exponent = DETAIL_MIN_EXPONENT; exponent <= DETAIL_MAX_EXPONENT; exponent++) {

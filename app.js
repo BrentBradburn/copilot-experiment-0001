@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, formatCoordinate, parseCoordinate, coordinatesFromEntry, normalizeDetailIterations, DETAIL_MIN_EXPONENT, DETAIL_MAX_EXPONENT } from './mandelbrot.js?v=2';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, formatCoordinate, parseCoordinate, coordinatesFromEntry, normalizeDetailIterations, DETAIL_MIN_EXPONENT, DETAIL_MAX_EXPONENT } from './mandelbrot.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -54,8 +54,12 @@ function selectedIterations() {
 }
 
 function syncDetailLevel() {
-  const iterations = selectedIterations();
   const slider = $('iterations');
+  const minIterations = String(2 ** DETAIL_MIN_EXPONENT);
+  const maxIterations = String(2 ** DETAIL_MAX_EXPONENT);
+  if (slider.min !== minIterations) slider.min = minIterations;
+  if (slider.max !== maxIterations) slider.max = maxIterations;
+  const iterations = selectedIterations();
   if (slider.value !== String(iterations)) slider.value = String(iterations);
   const exponent = Math.round(Math.log2(iterations));
   slider.parentElement.style.setProperty('--detail-stop', String((exponent - DETAIL_MIN_EXPONENT) / (DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT)));

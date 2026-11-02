@@ -66,7 +66,7 @@ input[type="range"] { width: 100%; margin: 6px 0; accent-color: var(--accent); c
 .detail-slider input[type="range"]::-moz-range-track { height: 17px; background: transparent; border: 0; }
 .detail-slider input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; opacity: 0; border: 0; }
 .detail-track { position: absolute; left: 0; right: 0; top: 6px; height: 5px; border-radius: 5px; background: #343d4f; pointer-events: none; }
-.detail-track i { position: absolute; top: 50%; left: calc(7px + (100% - 14px) * var(--detail-stop, 0.571429)); width: 14px; height: 14px; border-radius: 50%; background: var(--accent); transform: translateY(-50%); }
+.detail-track i { position: absolute; top: 50%; left: calc(7px + (100% - 14px) * var(--detail-stop, 0.5)); width: 14px; height: 14px; border-radius: 50%; background: var(--accent); transform: translateY(-50%); }
 .range-labels { display: flex; justify-content: space-between; color: #77869f; font-size: 9px; margin-top: 7px; }
 .detail-label { margin-top: 24px; }
 .palette-preview { height: 6px; margin: 12px 0 24px; border-radius: 5px; background: linear-gradient(90deg, #0a183b, #136d8a, #71dbc2, #ffe0a0); }
