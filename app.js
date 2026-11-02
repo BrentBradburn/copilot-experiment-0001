@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -81,6 +81,14 @@ function updateTelemetry() {
   $('real-axis').textContent = view.x.toFixed(10);
   $('imaginary-axis').textContent = view.y.toFixed(10);
   $('status').replaceChildren(document.createElement('i'), document.createTextNode(status));
+  refreshWatermarkPreview();
+}
+
+function refreshWatermarkPreview() {
+  const preview = $('watermark-preview');
+  const enabled = $('watermark').checked;
+  preview.hidden = !enabled;
+  preview.textContent = enabled ? formatArtworkMark(polishedFrame || view).text : '';
 }
 
 function draw() {
@@ -499,13 +507,58 @@ function startPolish() {
     status = 'Polished frame';
     updateControls();
     updateTelemetry();
+    syncArtworkMark();
   };
   requestAnimationFrame(step);
 }
 
+function paintArtworkMark(ctx, width, height, frame) {
+  const lines = formatArtworkMark(frame).text.split('\n');
+  const bounds = canvas.getBoundingClientRect();
+  const scale = width === canvas.width && bounds.width ? width / bounds.width : displayScale();
+  const fontSize = Math.max(10, Math.round(11 * scale));
+  const padX = Math.round(18 * scale);
+  const padY = Math.round(64 * scale);
+  ctx.save();
+  ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(2, fontSize / 5);
+  ctx.strokeStyle = 'rgba(5, 9, 18, 0.62)';
+  ctx.fillStyle = 'rgba(237, 242, 247, 0.72)';
+  let y = padY;
+  for (const line of lines) {
+    ctx.strokeText(line, width - padX, y);
+    ctx.fillText(line, width - padX, y);
+    y += Math.round(fontSize * 1.35);
+  }
+  ctx.restore();
+}
+
+function syncArtworkMark() {
+  refreshWatermarkPreview();
+  if (polishing || !polishedFrame) return;
+  if (polishBuffer.width !== canvas.width || polishBuffer.height !== canvas.height) return;
+  context.drawImage(polishBuffer, 0, 0);
+  if ($('watermark').checked) paintArtworkMark(context, canvas.width, canvas.height, polishedFrame);
+}
+
+function artworkCanvas() {
+  if (!$('watermark').checked) return canvas;
+  const copy = document.createElement('canvas');
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  const ctx = copy.getContext('2d');
+  const clean = polishBuffer.width === canvas.width && polishBuffer.height === canvas.height ? polishBuffer : canvas;
+  ctx.drawImage(clean, 0, 0);
+  paintArtworkMark(ctx, copy.width, copy.height, polishedFrame || view);
+  return copy;
+}
+
 function saveArtwork() {
   if ($('save-frame').disabled) return;
-  canvas.toBlob((blob) => {
+  artworkCanvas().toBlob((blob) => {
     if (!blob) {
       status = 'Unable to save artwork';
       updateTelemetry();
@@ -585,6 +638,7 @@ $('polish').addEventListener('click', () => {
   startPolish();
 });
 $('save-frame').addEventListener('click', saveArtwork);
+$('watermark').addEventListener('change', syncArtworkMark);
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
   const { u, v } = pointerFractions(event);

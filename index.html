@@ -89,6 +89,9 @@
             <p class="field-note">Renders this view in place at screen resolution. Extra samples smooth aliasing.</p>
             <button id="polish" class="polish-button" aria-pressed="false" aria-label="Polish this view into a full-resolution frame">✦ Polish frame</button>
             <div id="polish-progress" class="polish-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Polished render progress" aria-hidden="true"><span id="polish-progress-bar"></span></div>
+            <label class="check-row" for="watermark"><input id="watermark" type="checkbox">Location watermark</label>
+            <p id="watermark-note" class="field-note">Faint center and magnification on the polished frame and saved artwork, so this view can be found again.</p>
+            <p id="watermark-preview" class="watermark-preview" hidden></p>
             <button id="save-frame" class="reset-button" disabled>Save artwork</button>
           </div>
           <p id="keyboard-hint" class="keyboard-hint"><kbd>Space</kbd> to play or pause</p>

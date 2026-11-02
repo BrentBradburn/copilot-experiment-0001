@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderPixelRows, renderJuliaPixels, renderJuliaPixelRows, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS, normalizeSamples } from './mandelbrot.js';
+import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderPixelRows, renderJuliaPixels, renderJuliaPixelRows, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS, normalizeSamples, formatArtworkMark, parseArtworkMark } from './mandelbrot.js';
 
 test('known interior points remain bounded and exterior points escape', () => {
   for (const [x, y] of [[0, 0], [-1, 0], [-0.5, 0.5]]) assert.equal(escapeTime(x, y, 240), -1);
@@ -244,6 +244,31 @@ test('polished sampling keeps the selected view and supersamples aliasing in pla
   renderJuliaPixelRows(juliaRows, 1, 2, { x: 0, y: 0 }, 20, palettes.ocean, 1, 2, 1, 1);
   assert.equal(juliaRows[0], 3);
   assert.equal(juliaRows[7], 255);
+});
+
+test('artwork mark records location and magnification without moving the view', () => {
+  const views = [
+    ...Object.values(destinations),
+    { x: -0.761574, y: -0.0847596, span: 0.012 },
+    { x: 0, y: -0, span: MIN_SPAN },
+    { x: -1.25, y: 0.0000001, span: INITIAL_SPAN / 1e9 },
+  ];
+  for (const view of views) {
+    const snapshot = { ...view };
+    const mark = formatArtworkMark(view);
+    assert.deepEqual(view, snapshot);
+    assert.match(mark.text, /^re .+\nim .+\n.+×\nspan .+$/);
+    assert.equal(mark.magnification, `${(INITIAL_SPAN / view.span).toString()}×`);
+    const parsed = parseArtworkMark(mark.text);
+    assert.equal(parsed.x, view.x);
+    assert.equal(Object.is(parsed.y, view.y) || parsed.y === view.y, true);
+    assert.equal(parsed.span, view.span);
+    assert.equal(parsed.magnification, INITIAL_SPAN / view.span);
+    assert.equal(INITIAL_SPAN / parsed.span, parsed.magnification);
+  }
+  assert.equal(parseArtworkMark('not a mark'), null);
+  assert.equal(parseArtworkMark('re 1\nim 2\n3×\nspan 0'), null);
+  assert.equal(parseArtworkMark('re 1\nim 2\n-3×\nspan 1'), null);
 });
 
 test('default destination retains visible structure at deep zoom', () => {

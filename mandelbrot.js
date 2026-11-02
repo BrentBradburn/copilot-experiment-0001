@@ -180,6 +180,37 @@ export function normalizeSamples(samples) {
   return Math.min(count, 8);
 }
 
+const EXACT_NUMBER = '[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?';
+
+function formatExact(value) {
+  if (Object.is(value, -0)) return '-0';
+  return value.toString();
+}
+
+export function formatArtworkMark(view) {
+  const yNegative = view.y < 0 || Object.is(view.y, -0);
+  const location = `${formatExact(view.x)} ${yNegative ? '-' : '+'} ${formatExact(Math.abs(view.y))}i`;
+  const magnification = formatExact(INITIAL_SPAN / view.span);
+  const span = formatExact(view.span);
+  return {
+    location,
+    magnification: `${magnification}×`,
+    span,
+    text: `re ${formatExact(view.x)}\nim ${formatExact(view.y)}\n${magnification}×\nspan ${span}`,
+  };
+}
+
+export function parseArtworkMark(text) {
+  const match = String(text).trim().match(new RegExp(`^re (${EXACT_NUMBER})\\nim (${EXACT_NUMBER})\\n(${EXACT_NUMBER})×\\nspan (${EXACT_NUMBER})$`));
+  if (!match) return null;
+  const x = Number(match[1]);
+  const y = Number(match[2]);
+  const magnification = Number(match[3]);
+  const span = Number(match[4]);
+  if (![x, y, magnification, span].every(Number.isFinite) || magnification <= 0 || span <= 0) return null;
+  return { x, y, span, magnification };
+}
+
 function paintAveraged(pixels, offset, values, palette) {
   const first = values[0];
   for (let index = 1; index < values.length; index++) {
