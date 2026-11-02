@@ -26,7 +26,7 @@ Add `?demo` to the URL to start in demo mode.
 - Click the image to zoom in while keeping the point under the pointer fixed.
 - Select a destination or **Reset view** to return to a preset.
 - Adjust zoom speed, iteration detail, and palette while exploring.
-- Click **Polish frame** to re-render the current view in place at screen resolution. Choose **Frame quality** to add 2×2, 3×3, or 4×4 samples per pixel, which smooths the aliasing left by the live preview. Cancel from the same button. **Save artwork** downloads the finished still. Check **Location watermark** to add a faint center, magnification, and horizontal span — on the polished frame and in the saved PNG — so that view can be found again. Magnification is the initial width 3.5 divided by the horizontal span.
+- Click **Polish frame** to re-render the current view in place at screen resolution. Choose **Frame quality** to add 2×2, 3×3, or 4×4 samples per pixel, which smooths the aliasing left by the live preview. Cancel from the same button. **Save artwork** downloads the finished still. **Location watermark** is on by default and signs the polished frame and saved PNG with a faint complex coordinate in the lower-left, so that center can be found again. Uncheck it for an unmarked still.
 - Use **⛶** to expand the visualization to fullscreen. Frame quality, **Polish frame**, and **Save artwork** stay on the image so a fullscreen view can be polished and downloaded the same way.
 - Watch the smaller **Live Julia** view: it is the Julia set for the center of the Mandelbrot image and updates as you pan, zoom, or play.
 

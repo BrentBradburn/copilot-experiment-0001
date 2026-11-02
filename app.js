@@ -204,6 +204,7 @@ function updateControls() {
   polishButton.setAttribute('aria-label', polishing ? 'Cancel polished render' : 'Polish this view into a full-resolution frame');
   $('save-frame').disabled = polishing || !polishedFrame;
   canvas.parentElement.setAttribute('aria-busy', String(polishing));
+  canvas.parentElement.classList.toggle('signed', Boolean(polishedFrame) && !polishing && $('watermark').checked);
   const badge = polishing ? ' POLISHING' : polishedFrame ? ' POLISHED' : demo ? ' DEMO' : ' LIVE RENDER';
   $('live-badge').replaceChildren(document.createElement('i'), document.createTextNode(badge));
 }
@@ -513,31 +514,33 @@ function startPolish() {
 }
 
 function paintArtworkMark(ctx, width, height, frame) {
-  const lines = formatArtworkMark(frame).text.split('\n');
+  const text = formatArtworkMark(frame).text;
   const bounds = canvas.getBoundingClientRect();
   const scale = width === canvas.width && bounds.width ? width / bounds.width : displayScale();
-  const fontSize = Math.max(10, Math.round(11 * scale));
-  const padX = Math.round(18 * scale);
-  const padY = Math.round(64 * scale);
+  let fontSize = Math.max(11, Math.round(13 * scale));
+  const padX = Math.round(22 * scale);
+  const padY = Math.round(22 * scale);
+  const maxWidth = Math.max(40, width - padX - Math.round(108 * scale));
   ctx.save();
-  ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(2, fontSize / 5);
-  ctx.strokeStyle = 'rgba(5, 9, 18, 0.62)';
-  ctx.fillStyle = 'rgba(237, 242, 247, 0.72)';
-  let y = padY;
-  for (const line of lines) {
-    ctx.strokeText(line, width - padX, y);
-    ctx.fillText(line, width - padX, y);
-    y += Math.round(fontSize * 1.35);
+  ctx.font = `italic ${fontSize}px Georgia, "Palatino Linotype", Palatino, serif`;
+  while (fontSize > 8 && ctx.measureText(text).width > maxWidth) {
+    fontSize -= 1;
+    ctx.font = `italic ${fontSize}px Georgia, "Palatino Linotype", Palatino, serif`;
   }
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.shadowColor = 'rgba(5, 8, 16, 0.45)';
+  ctx.shadowBlur = fontSize * 0.9;
+  ctx.shadowOffsetY = Math.max(1, Math.round(fontSize * 0.06));
+  ctx.fillStyle = 'rgba(244, 236, 220, 0.5)';
+  ctx.fillText(text, padX, height - padY);
   ctx.restore();
 }
 
 function syncArtworkMark() {
   refreshWatermarkPreview();
+  const signed = Boolean(polishedFrame) && !polishing && $('watermark').checked;
+  canvas.parentElement.classList.toggle('signed', signed);
   if (polishing || !polishedFrame) return;
   if (polishBuffer.width !== canvas.width || polishBuffer.height !== canvas.height) return;
   context.drawImage(polishBuffer, 0, 0);

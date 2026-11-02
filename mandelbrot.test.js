@@ -246,7 +246,7 @@ test('polished sampling keeps the selected view and supersamples aliasing in pla
   assert.equal(juliaRows[7], 255);
 });
 
-test('artwork mark records location and magnification without moving the view', () => {
+test('artwork mark is a single complex coordinate and does not move the view', () => {
   const views = [
     ...Object.values(destinations),
     { x: -0.761574, y: -0.0847596, span: 0.012 },
@@ -257,18 +257,18 @@ test('artwork mark records location and magnification without moving the view', 
     const snapshot = { ...view };
     const mark = formatArtworkMark(view);
     assert.deepEqual(view, snapshot);
-    assert.match(mark.text, /^re .+\nim .+\n.+×\nspan .+$/);
-    assert.equal(mark.magnification, `${(INITIAL_SPAN / view.span).toString()}×`);
+    assert.equal(mark.text.includes('\n'), false);
+    assert.equal(mark.text.includes('×'), false);
+    assert.equal(mark.text.includes('span'), false);
+    assert.match(mark.text, / [+-] .+i$/);
     const parsed = parseArtworkMark(mark.text);
     assert.equal(parsed.x, view.x);
     assert.equal(Object.is(parsed.y, view.y) || parsed.y === view.y, true);
-    assert.equal(parsed.span, view.span);
-    assert.equal(parsed.magnification, INITIAL_SPAN / view.span);
-    assert.equal(INITIAL_SPAN / parsed.span, parsed.magnification);
+    assert.equal('span' in parsed, false);
   }
   assert.equal(parseArtworkMark('not a mark'), null);
-  assert.equal(parseArtworkMark('re 1\nim 2\n3×\nspan 0'), null);
-  assert.equal(parseArtworkMark('re 1\nim 2\n-3×\nspan 1'), null);
+  assert.equal(parseArtworkMark('1 + 2i\n3×'), null);
+  assert.equal(parseArtworkMark('1 + 2'), null);
 });
 
 test('default destination retains visible structure at deep zoom', () => {

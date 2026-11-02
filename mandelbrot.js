@@ -181,6 +181,7 @@ export function normalizeSamples(samples) {
 }
 
 const EXACT_NUMBER = '[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?';
+const UNSIGNED_NUMBER = '(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?';
 
 function formatExact(value) {
   if (Object.is(value, -0)) return '-0';
@@ -189,26 +190,17 @@ function formatExact(value) {
 
 export function formatArtworkMark(view) {
   const yNegative = view.y < 0 || Object.is(view.y, -0);
-  const location = `${formatExact(view.x)} ${yNegative ? '-' : '+'} ${formatExact(Math.abs(view.y))}i`;
-  const magnification = formatExact(INITIAL_SPAN / view.span);
-  const span = formatExact(view.span);
-  return {
-    location,
-    magnification: `${magnification}×`,
-    span,
-    text: `re ${formatExact(view.x)}\nim ${formatExact(view.y)}\n${magnification}×\nspan ${span}`,
-  };
+  const text = `${formatExact(view.x)} ${yNegative ? '-' : '+'} ${formatExact(Math.abs(view.y))}i`;
+  return { text };
 }
 
 export function parseArtworkMark(text) {
-  const match = String(text).trim().match(new RegExp(`^re (${EXACT_NUMBER})\\nim (${EXACT_NUMBER})\\n(${EXACT_NUMBER})×\\nspan (${EXACT_NUMBER})$`));
+  const match = String(text).trim().match(new RegExp(`^(${EXACT_NUMBER}) ([+-]) (${UNSIGNED_NUMBER})i$`));
   if (!match) return null;
   const x = Number(match[1]);
-  const y = Number(match[2]);
-  const magnification = Number(match[3]);
-  const span = Number(match[4]);
-  if (![x, y, magnification, span].every(Number.isFinite) || magnification <= 0 || span <= 0) return null;
-  return { x, y, span, magnification };
+  const y = match[2] === '-' ? -Number(match[3]) : Number(match[3]);
+  if (![x, y].every(Number.isFinite)) return null;
+  return { x, y };
 }
 
 function paintAveraged(pixels, offset, values, palette) {
