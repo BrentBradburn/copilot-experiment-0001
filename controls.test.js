@@ -39,3 +39,16 @@ test('polished render is an in-place control with quality and artwork save', asy
   assert.match(app, /link\.download = 'infinite-mandelbrot\.png'/);
   assert.equal(app.includes('zoomAt(view, 1)'), false);
 });
+
+test('status panel stays directly under the render panel', async () => {
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
+  const stage = html.match(/<div class="stage">([\s\S]*?)<\/div>\s*<aside class="controls"/);
+  assert.ok(stage, 'render and status should share a column beside the controls');
+  assert.match(stage[1], /class="viewer"/);
+  assert.match(stage[1], /class="telemetry"/);
+  assert.equal(stage[1].indexOf('class="viewer"') < stage[1].indexOf('class="telemetry"'), true);
+  assert.equal(/<\/div>\s*<section class="telemetry"/.test(html), false);
+  assert.match(css, /\.stage\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/);
+  assert.match(css, /\.workspace\s*\{[^}]*align-items:\s*start/);
+});
