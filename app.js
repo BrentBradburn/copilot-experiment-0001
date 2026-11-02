@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderJuliaPixels, pointsOfInterest, startDemo, stepDemo } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN } from './mandelbrot.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -9,6 +9,10 @@ const juliaCanvas = $('julia');
 const juliaContext = juliaCanvas.getContext('2d', { alpha: false });
 const juliaBuffer = document.createElement('canvas');
 const juliaBufferContext = juliaBuffer.getContext('2d', { alpha: false });
+const polishBuffer = document.createElement('canvas');
+const polishContext = polishBuffer.getContext('2d', { alpha: false });
+const juliaPolishBuffer = document.createElement('canvas');
+const juliaPolishContext = juliaPolishBuffer.getContext('2d', { alpha: false });
 const MAX_WORK = 60000000;
 let view = { ...destinations.seahorse };
 let playing = false;
@@ -25,7 +29,11 @@ let panRenderTimer = 0;
 let fullQualityPanRender = false;
 let lastJuliaDraw = 0;
 let juliaKey = '';
+let polishing = false;
+let polishToken = 0;
+let polishedFrame = null;
 const PAN_THRESHOLD = 3;
+const POLISH_SLICE_MS = 14;
 
 function formatSigned(value) {
   const text = Math.abs(value).toFixed(6);
@@ -37,6 +45,36 @@ function formatC(c) {
   return `c = ${formatSigned(c.x)} ${sign} ${Math.abs(c.y).toFixed(6)}i`;
 }
 
+function displayScale() {
+  return Math.min(devicePixelRatio || 1, 2);
+}
+
+function iterationLimit() {
+  return Number($('iterations').value) + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
+}
+
+function polishSamples() {
+  return normalizeSamples($('polish-samples').value);
+}
+
+function sameView(frame, next = view) {
+  return frame.x === next.x && frame.y === next.y && frame.span === next.span;
+}
+
+function isPolishedCurrent() {
+  if (!polishedFrame || polishing) return false;
+  const bounds = canvas.getBoundingClientRect();
+  const width = Math.round(bounds.width * displayScale());
+  const height = Math.round(bounds.height * displayScale());
+  return sameView(polishedFrame)
+    && polishedFrame.palette === $('palette').value
+    && polishedFrame.iterations === Number($('iterations').value)
+    && polishedFrame.width === canvas.width
+    && polishedFrame.height === canvas.height
+    && canvas.width === width
+    && canvas.height === height;
+}
+
 function updateTelemetry() {
   const zoom = INITIAL_SPAN / view.span;
   $('magnification').textContent = `${zoom >= 100000 ? zoom.toExponential(2) : zoom.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}×`;
@@ -46,20 +84,31 @@ function updateTelemetry() {
 }
 
 function draw() {
+  if (polishing) return;
+  if (isPolishedCurrent()) {
+    updateTelemetry();
+    drawJulia();
+    return;
+  }
+  if (polishedFrame) {
+    polishedFrame = null;
+    juliaKey = '';
+    updateControls();
+  }
   const bounds = canvas.getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
   const aspect = bounds.width / bounds.height;
-  const limit = Number($('iterations').value) + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
+  const limit = iterationLimit();
   const maxPixels = Math.max(20000, Math.min(fullQualityPanRender ? 650000 : (playing || dragging ? 130000 : 650000), Math.floor(MAX_WORK / limit)));
-  const width = Math.max(1, Math.floor(Math.min(bounds.width * Math.min(devicePixelRatio || 1, 2), Math.sqrt(maxPixels * aspect))));
+  const width = Math.max(1, Math.floor(Math.min(bounds.width * displayScale(), Math.sqrt(maxPixels * aspect))));
   const height = Math.max(1, Math.floor(width / aspect));
   buffer.width = width;
   buffer.height = height;
   const image = bufferContext.createImageData(width, height);
-  renderPixels(image.data, width, height, view, limit, palettes[$('palette').value]);
+  renderPixelRows(image.data, width, height, view, limit, palettes[$('palette').value]);
   bufferContext.putImageData(image, 0, 0);
-  const displayWidth = Math.round(bounds.width * Math.min(devicePixelRatio || 1, 2));
-  const displayHeight = Math.round(bounds.height * Math.min(devicePixelRatio || 1, 2));
+  const displayWidth = Math.round(bounds.width * displayScale());
+  const displayHeight = Math.round(bounds.height * displayScale());
   if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
     canvas.width = displayWidth;
     canvas.height = displayHeight;
@@ -77,23 +126,25 @@ function drawJulia(throttled = false) {
   const bounds = juliaCanvas.getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
   const c = correspondingC(view);
+  const polishedNow = isPolishedCurrent();
+  const samples = polishedNow ? polishedFrame.samples : 1;
   const limit = Math.min(Number($('iterations').value), playing || dragging ? 100 : 220);
-  const quality = playing || dragging ? 'low' : 'high';
+  const quality = polishedNow ? `polish-${samples}` : (playing || dragging ? 'low' : 'high');
   const key = `${c.x},${c.y},${limit},${quality},${$('palette').value},${bounds.width},${bounds.height}`;
   if (key === juliaKey) return;
   juliaKey = key;
   lastJuliaDraw = now;
   const aspect = bounds.width / bounds.height;
-  const maxPixels = playing || dragging ? 20000 : 70000;
-  const width = Math.max(1, Math.floor(Math.min(bounds.width * Math.min(devicePixelRatio || 1, 2), Math.sqrt(maxPixels * aspect))));
+  const maxPixels = polishedNow ? Number.POSITIVE_INFINITY : (playing || dragging ? 20000 : 70000);
+  const width = Math.max(1, Math.floor(Math.min(bounds.width * displayScale(), Math.sqrt(maxPixels * aspect))));
   const height = Math.max(1, Math.floor(width / aspect));
   juliaBuffer.width = width;
   juliaBuffer.height = height;
   const image = juliaBufferContext.createImageData(width, height);
-  renderJuliaPixels(image.data, width, height, c, limit, palettes[$('palette').value]);
+  renderJuliaPixelRows(image.data, width, height, c, limit, palettes[$('palette').value], 0, height, samples, JULIA_SPAN);
   juliaBufferContext.putImageData(image, 0, 0);
-  const displayWidth = Math.round(bounds.width * Math.min(devicePixelRatio || 1, 2));
-  const displayHeight = Math.round(bounds.height * Math.min(devicePixelRatio || 1, 2));
+  const displayWidth = Math.round(bounds.width * displayScale());
+  const displayHeight = Math.round(bounds.height * displayScale());
   if (juliaCanvas.width !== displayWidth || juliaCanvas.height !== displayHeight) {
     juliaCanvas.width = displayWidth;
     juliaCanvas.height = displayHeight;
@@ -139,7 +190,14 @@ function updateControls() {
   const hint = $('keyboard-hint');
   hint.replaceChildren(document.createElement('kbd'), document.createTextNode(demo ? (playing ? ' to pause demo' : ' to resume demo') : ' to play or pause'));
   hint.querySelector('kbd').textContent = 'Space';
-  $('live-badge').replaceChildren(document.createElement('i'), document.createTextNode(demo ? ' DEMO' : ' LIVE RENDER'));
+  const polishButton = $('polish');
+  polishButton.textContent = polishing ? 'Cancel polish' : '✦ Polish frame';
+  polishButton.setAttribute('aria-pressed', String(polishing));
+  polishButton.setAttribute('aria-label', polishing ? 'Cancel polished render' : 'Polish this view into a full-resolution frame');
+  $('save-frame').disabled = polishing || !polishedFrame;
+  canvas.parentElement.setAttribute('aria-busy', String(polishing));
+  const badge = polishing ? ' POLISHING' : polishedFrame ? ' POLISHED' : demo ? ' DEMO' : ' LIVE RENDER';
+  $('live-badge').replaceChildren(document.createElement('i'), document.createTextNode(badge));
 }
 
 function showPointOfInterest(key) {
@@ -176,6 +234,7 @@ function requestDraw() {
 }
 
 function setPlaying(value, message) {
+  if (value) cancelPolish();
   playing = value;
   lastTime = 0;
   status = message || (playing ? playingStatus() : (demo ? 'Demo paused' : 'Paused'));
@@ -197,6 +256,7 @@ function endDemo(message = 'Paused') {
 }
 
 function resetView() {
+  cancelPolish();
   demo = null;
   view = { ...destinations[$('destination').value] };
   $('location-label').textContent = $('destination').selectedOptions[0].textContent;
@@ -210,6 +270,7 @@ function releaseDemo() {
 }
 
 function manualZoom(factor, u = 0.5, v = 0.5) {
+  cancelPolish();
   const tookOver = releaseDemo();
   view = zoomAt(view, factor, u, v, canvas.clientWidth / canvas.clientHeight);
   if (tookOver) {
@@ -268,6 +329,7 @@ function showPanPreview() {
 }
 
 function beginPan() {
+  cancelPolish();
   dragging = true;
   canvas.classList.add('panning');
   $('location-label').textContent = 'Custom coordinates';
@@ -290,7 +352,178 @@ function finishPan() {
   requestDraw();
 }
 
+function cancelPolish() {
+  polishToken += 1;
+  const active = polishing || polishedFrame !== null;
+  polishing = false;
+  polishedFrame = null;
+  juliaKey = '';
+  const progress = $('polish-progress');
+  progress.setAttribute('aria-hidden', 'true');
+  progress.setAttribute('aria-valuenow', '0');
+  $('polish-progress-bar').style.width = '0';
+  if (active) updateControls();
+  return active;
+}
+
+function setPolishProgress(fraction) {
+  const percent = Math.max(0, Math.min(100, Math.round(fraction * 100)));
+  const progress = $('polish-progress');
+  progress.setAttribute('aria-hidden', 'false');
+  progress.setAttribute('aria-valuenow', String(percent));
+  $('polish-progress-bar').style.width = `${percent}%`;
+  status = percent >= 100 ? 'Polished frame' : `Polishing · ${percent}%`;
+  updateTelemetry();
+}
+
+function startPolish() {
+  const bounds = canvas.getBoundingClientRect();
+  if (!bounds.width || !bounds.height) {
+    status = 'Unable to polish this view';
+    updateTelemetry();
+    return;
+  }
+  releaseDemo();
+  playing = false;
+  lastTime = 0;
+  polishing = true;
+  polishedFrame = null;
+  const token = ++polishToken;
+  const samples = polishSamples();
+  const paletteName = $('palette').value;
+  const palette = palettes[paletteName];
+  const iterations = Number($('iterations').value);
+  const snapshot = { x: view.x, y: view.y, span: view.span };
+  const width = Math.max(1, Math.round(bounds.width * displayScale()));
+  const height = Math.max(1, Math.round(bounds.height * displayScale()));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  polishBuffer.width = width;
+  polishBuffer.height = height;
+  const image = polishContext.createImageData(width, height);
+  const limit = iterationLimit();
+  const juliaBounds = juliaCanvas.getBoundingClientRect();
+  const juliaSamples = samples;
+  const juliaLimit = Math.min(iterations, 220);
+  const c = correspondingC(snapshot);
+  let juliaWidth = 0;
+  let juliaHeight = 0;
+  let juliaImage = null;
+  if (juliaBounds.width && juliaBounds.height) {
+    juliaWidth = Math.max(1, Math.floor(juliaBounds.width * displayScale()));
+    juliaHeight = Math.max(1, Math.floor(juliaWidth / (juliaBounds.width / juliaBounds.height)));
+    juliaPolishBuffer.width = juliaWidth;
+    juliaPolishBuffer.height = juliaHeight;
+    juliaImage = juliaPolishContext.createImageData(juliaWidth, juliaHeight);
+  }
+  let phase = 'mandelbrot';
+  let row = 0;
+  const rowStep = samples >= 4 ? 1 : samples === 3 ? 2 : 4;
+  status = 'Polishing · 0%';
+  updateControls();
+  setPolishProgress(0);
+
+  const step = () => {
+    if (token !== polishToken) return;
+    const sliceStart = performance.now();
+    while (performance.now() - sliceStart < POLISH_SLICE_MS) {
+      if (phase === 'mandelbrot') {
+        if (row >= height) {
+          phase = 'julia';
+          row = 0;
+          continue;
+        }
+        const next = Math.min(height, row + rowStep);
+        renderPixelRows(image.data, width, height, snapshot, limit, palette, row, next, samples);
+        row = next;
+      } else if (!juliaImage || row >= juliaHeight) {
+        break;
+      } else {
+        const next = Math.min(juliaHeight, row + 8);
+        renderJuliaPixelRows(juliaImage.data, juliaWidth, juliaHeight, c, juliaLimit, palette, row, next, juliaSamples, JULIA_SPAN);
+        row = next;
+      }
+    }
+    if (token !== polishToken) return;
+    const mandelbrotRows = phase === 'mandelbrot' ? row : height;
+    polishContext.putImageData(image, 0, 0);
+    if (mandelbrotRows > 0) {
+      context.imageSmoothingEnabled = false;
+      context.drawImage(polishBuffer, 0, 0, width, mandelbrotRows, 0, 0, width, mandelbrotRows);
+      context.imageSmoothingEnabled = true;
+    }
+    const juliaDone = !juliaImage || (phase === 'julia' && row >= juliaHeight);
+    const juliaFraction = juliaDone ? 1 : phase === 'julia' ? row / juliaHeight : 0;
+    setPolishProgress(Math.min(0.99, mandelbrotRows / height * 0.86 + juliaFraction * 0.14));
+    const currentBounds = canvas.getBoundingClientRect();
+    const resized = Math.abs(Math.round(currentBounds.width * displayScale()) - width) > 1
+      || Math.abs(Math.round(currentBounds.height * displayScale()) - height) > 1;
+    if (resized || !sameView(snapshot)) {
+      cancelPolish();
+      status = 'Paused';
+      updateControls();
+      updateTelemetry();
+      requestDraw();
+      return;
+    }
+    if (phase === 'mandelbrot' || (juliaImage && row < juliaHeight)) {
+      requestAnimationFrame(step);
+      return;
+    }
+    buffer.width = width;
+    buffer.height = height;
+    bufferContext.drawImage(polishBuffer, 0, 0);
+    rendered = { ...snapshot, width, height };
+    if (juliaImage) {
+      juliaBuffer.width = juliaWidth;
+      juliaBuffer.height = juliaHeight;
+      juliaBufferContext.putImageData(juliaImage, 0, 0);
+      const displayWidth = Math.round(juliaBounds.width * displayScale());
+      const displayHeight = Math.round(juliaBounds.height * displayScale());
+      if (juliaCanvas.width !== displayWidth || juliaCanvas.height !== displayHeight) {
+        juliaCanvas.width = displayWidth;
+        juliaCanvas.height = displayHeight;
+      }
+      juliaContext.drawImage(juliaBuffer, 0, 0, juliaCanvas.width, juliaCanvas.height);
+      juliaKey = `${c.x},${c.y},${juliaLimit},polish-${juliaSamples},${paletteName},${juliaBounds.width},${juliaBounds.height}`;
+      const label = formatC(c);
+      $('julia-c').textContent = label;
+      juliaCanvas.setAttribute('aria-label', `Julia set for the Mandelbrot view center, ${label}`);
+    }
+    polishing = false;
+    polishedFrame = { ...snapshot, width, height, palette: paletteName, iterations, samples };
+    $('polish-progress').setAttribute('aria-hidden', 'true');
+    $('polish-progress').setAttribute('aria-valuenow', '100');
+    status = 'Polished frame';
+    updateControls();
+    updateTelemetry();
+  };
+  requestAnimationFrame(step);
+}
+
+function saveArtwork() {
+  if ($('save-frame').disabled) return;
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      status = 'Unable to save artwork';
+      updateTelemetry();
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'infinite-mandelbrot.png';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, 'image/png');
+}
+
 function startZoom(direction) {
+  cancelPolish();
   const takingOverDemo = demo !== null;
   if (takingOverDemo) demo = null;
   if (!takingOverDemo && playing && zoomDirection === direction) {
@@ -332,12 +565,26 @@ $('speed').addEventListener('input', () => {
 });
 $('iterations').addEventListener('input', () => {
   $('iterations-value').textContent = $('iterations').value;
+  cancelPolish();
   requestDraw();
 });
 $('palette').addEventListener('change', () => {
   $('palette-preview').dataset.palette = $('palette').value;
+  cancelPolish();
   requestDraw();
 });
+$('polish').addEventListener('click', () => {
+  if (polishing) {
+    cancelPolish();
+    status = 'Paused';
+    updateControls();
+    updateTelemetry();
+    requestDraw();
+    return;
+  }
+  startPolish();
+});
+$('save-frame').addEventListener('click', saveArtwork);
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
   const { u, v } = pointerFractions(event);

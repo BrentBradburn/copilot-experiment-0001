@@ -18,3 +18,24 @@ test('start zooming is split into side-by-side zoom in and zoom out buttons', as
   assert.match(app, /\$\('play-out'\)\.addEventListener\('click', \(\) => startZoom\('out'\)\)/);
   assert.equal(app.includes("$('play')"), false);
 });
+
+test('polished render is an in-place control with quality and artwork save', async () => {
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  const quality = html.match(/<select id="polish-samples"[\s\S]*?<\/select>/);
+  assert.ok(quality, 'frame quality control should be present');
+  assert.match(quality[0], /value="2" selected/);
+  assert.match(quality[0], /2×2 samples/);
+  assert.match(quality[0], /4×4 samples/);
+  assert.match(html, /id="polish"[\s\S]*Polish frame/);
+  assert.match(html, /id="save-frame"[\s\S]*Save artwork/);
+  assert.match(html, /id="polish-progress"[\s\S]*aria-hidden="true"/);
+  assert.match(css, /\.polish-button\s*\{/);
+  assert.match(app, /\$\('polish'\)\.addEventListener\('click'/);
+  assert.match(app, /function startPolish\(/);
+  assert.match(app, /renderPixelRows\(/);
+  assert.match(app, /normalizeSamples\(\$\('polish-samples'\)\.value\)/);
+  assert.match(app, /link\.download = 'infinite-mandelbrot\.png'/);
+  assert.equal(app.includes('zoomAt(view, 1)'), false);
+});

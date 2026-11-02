@@ -26,11 +26,13 @@ Add `?demo` to the URL to start in demo mode.
 - Click the image to zoom in while keeping the point under the pointer fixed.
 - Select a destination or **Reset view** to return to a preset.
 - Adjust zoom speed, iteration detail, and palette while exploring.
+- Click **Polish frame** to re-render the current view in place at screen resolution. Choose **Frame quality** to add 2×2, 3×3, or 4×4 samples per pixel, which smooths the aliasing left by the live preview. Cancel from the same button. **Save artwork** downloads the finished still.
 - Use **⛶** to expand the visualization to fullscreen.
 - Watch the smaller **Live Julia** view: it is the Julia set for the center of the Mandelbrot image and updates as you pan, zoom, or play.
 
 Animation renders at reduced resolution for responsiveness; pausing restores
-detail. Higher iteration counts reveal more boundary structure but take longer
+detail. A polished frame removes that resolution cap and supersamples each pixel.
+Higher iteration counts reveal more boundary structure but take longer
 to render; iteration detail also increases automatically at deeper zooms.
 Zooming stops at 10¹³×, before floating-point precision becomes
 unreliable. Animation pauses when the tab is hidden.
@@ -43,4 +45,4 @@ npm test
 
 Tests use Node’s built-in test runner to check escape calculations, pixel colors,
 coordinate mapping, pointer-anchored zooming, panning, zoom limits, the demo tour,
-animated zoom in and out, the side-by-side zoom controls, and the Julia set that corresponds to the current view center.
+animated zoom in and out, the side-by-side zoom controls, polished supersampled frames, and the Julia set that corresponds to the current view center.

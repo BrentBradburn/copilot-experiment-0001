@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderJuliaPixels, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS } from './mandelbrot.js';
+import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderPixelRows, renderJuliaPixels, renderJuliaPixelRows, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS, normalizeSamples } from './mandelbrot.js';
 
 test('known interior points remain bounded and exterior points escape', () => {
   for (const [x, y] of [[0, 0], [-1, 0], [-0.5, 0.5]]) assert.equal(escapeTime(x, y, 240), -1);
@@ -201,6 +201,49 @@ test('Julia rendering shows the filled set for c = 0 inside a fixed window', () 
   renderJuliaPixels(outside, 1, 1, { x: 1, y: 1 }, 40, palettes.ember, 0.2);
   assert.equal(outside[3], 255);
   assert.notDeepEqual([...outside], [5, 9, 18, 255]);
+});
+
+test('polished sampling keeps the selected view and supersamples aliasing in place', () => {
+  assert.equal(normalizeSamples(0), 1);
+  assert.equal(normalizeSamples(2.8), 2);
+  assert.equal(normalizeSamples(99), 8);
+  const view = { x: 0.25, y: 0, span: 0.5 };
+  const snapshot = { ...view };
+  const single = new Uint8ClampedArray(4);
+  const polished = new Uint8ClampedArray(4);
+  renderPixels(single, 1, 1, view, 80, palettes.aurora, 1);
+  renderPixels(polished, 1, 1, view, 80, palettes.aurora, 2);
+  assert.deepEqual(view, snapshot);
+  assert.deepEqual([...single], [5, 9, 18, 255]);
+  assert.equal(polished[3], 255);
+  assert.notDeepEqual([...polished], [...single]);
+  const again = new Uint8ClampedArray(4);
+  renderPixels(again, 1, 1, view, 80, palettes.aurora, 2);
+  assert.deepEqual(again, polished);
+
+  const interior = new Uint8ClampedArray(4);
+  renderPixels(interior, 1, 1, { x: 0, y: 0, span: 0.01 }, 40, palettes.ocean, 4);
+  assert.deepEqual([...interior], [5, 9, 18, 255]);
+
+  const rows = new Uint8ClampedArray(4 * 4 * 4);
+  rows.fill(7);
+  renderPixelRows(rows, 4, 4, { x: 2, y: 1, span: 0.2 }, 30, palettes.ember, 1, 3, 2);
+  assert.equal(rows[0], 7);
+  assert.equal(rows[3 * 4 * 4], 7);
+  assert.equal(rows[1 * 4 * 4 + 3], 255);
+  assert.notEqual(rows[1 * 4 * 4], 7);
+
+  const juliaSingle = new Uint8ClampedArray(4);
+  const juliaPolished = new Uint8ClampedArray(4);
+  renderJuliaPixels(juliaSingle, 1, 1, { x: 0, y: 0 }, 40, palettes.aurora, JULIA_SPAN, 1);
+  renderJuliaPixels(juliaPolished, 1, 1, { x: 0, y: 0 }, 40, palettes.aurora, JULIA_SPAN, 2);
+  assert.deepEqual([...juliaSingle], [5, 9, 18, 255]);
+  assert.notDeepEqual([...juliaPolished], [...juliaSingle]);
+  const juliaRows = new Uint8ClampedArray(8);
+  juliaRows.fill(3);
+  renderJuliaPixelRows(juliaRows, 1, 2, { x: 0, y: 0 }, 20, palettes.ocean, 1, 2, 1, 1);
+  assert.equal(juliaRows[0], 3);
+  assert.equal(juliaRows[7], 255);
 });
 
 test('default destination retains visible structure at deep zoom', () => {
