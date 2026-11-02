@@ -162,6 +162,73 @@ function paintSample(pixels, offset, value, palette) {
   pixels[offset + 3] = 255;
 }
 
+const sampleColor = new Uint8ClampedArray(4);
+
+function channelToLinear(channel) {
+  const value = channel / 255;
+  return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+}
+
+function linearToChannel(value) {
+  const encoded = value <= 0.0031308 ? value * 12.92 : 1.055 * value ** (1 / 2.4) - 0.055;
+  return Math.round(Math.min(1, Math.max(0, encoded)) * 255);
+}
+
+export function normalizeSamples(samples) {
+  const count = Math.floor(Number(samples));
+  if (!Number.isFinite(count) || count < 1) return 1;
+  return Math.min(count, 8);
+}
+
+function paintAveraged(pixels, offset, values, palette) {
+  const first = values[0];
+  for (let index = 1; index < values.length; index++) {
+    if (values[index] !== first) {
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      for (let sample = 0; sample < values.length; sample++) {
+        paintSample(sampleColor, 0, values[sample], palette);
+        red += channelToLinear(sampleColor[0]);
+        green += channelToLinear(sampleColor[1]);
+        blue += channelToLinear(sampleColor[2]);
+      }
+      const count = values.length;
+      pixels[offset] = linearToChannel(red / count);
+      pixels[offset + 1] = linearToChannel(green / count);
+      pixels[offset + 2] = linearToChannel(blue / count);
+      pixels[offset + 3] = 255;
+      return;
+    }
+  }
+  paintSample(pixels, offset, first, palette);
+}
+
+function renderSampledRows(pixels, width, height, step, left, top, limit, palette, samples, startRow, endRow, sampleAt) {
+  if (width <= 0 || height <= 0 || step === 0) return;
+  const count = normalizeSamples(samples);
+  const rowStart = Math.max(0, Math.min(height, startRow | 0));
+  const rowEnd = Math.max(rowStart, Math.min(height, endRow === undefined ? height : endRow | 0));
+  const values = count > 1 ? new Array(count * count) : null;
+  for (let row = rowStart; row < rowEnd; row++) {
+    for (let col = 0; col < width; col++) {
+      const offset = (row * width + col) * 4;
+      if (count === 1) {
+        paintSample(pixels, offset, sampleAt(left + (col + 0.5) * step, top - (row + 0.5) * step, limit), palette);
+        continue;
+      }
+      let index = 0;
+      for (let sy = 0; sy < count; sy++) {
+        const y = top - (row + (sy + 0.5) / count) * step;
+        for (let sx = 0; sx < count; sx++) {
+          values[index++] = sampleAt(left + (col + (sx + 0.5) / count) * step, y, limit);
+        }
+      }
+      paintAveraged(pixels, offset, values, palette);
+    }
+  }
+}
+
 export function juliaEscapeTime(zx, zy, cx, cy, limit) {
   let x = zx;
   let y = zy;
@@ -176,26 +243,46 @@ export function juliaEscapeTime(zx, zy, cx, cy, limit) {
   return count + 1 - Math.log2(Math.log2(x * x + y * y) / 2);
 }
 
-export function renderPixels(pixels, width, height, view, limit, palette) {
+export function renderPixelRows(pixels, width, height, view, limit, palette, startRow = 0, endRow = height, samples = 1) {
   const step = view.span / width;
-  const left = view.x - view.span / 2;
-  const top = view.y + view.span * height / width / 2;
-  for (let row = 0; row < height; row++) {
-    for (let col = 0; col < width; col++) {
-      const value = escapeTime(left + (col + 0.5) * step, top - (row + 0.5) * step, limit);
-      paintSample(pixels, (row * width + col) * 4, value, palette);
-    }
-  }
+  renderSampledRows(
+    pixels,
+    width,
+    height,
+    step,
+    view.x - view.span / 2,
+    view.y + view.span * height / width / 2,
+    limit,
+    palette,
+    samples,
+    startRow,
+    endRow,
+    (x, y, iterationLimit) => escapeTime(x, y, iterationLimit),
+  );
 }
 
-export function renderJuliaPixels(pixels, width, height, c, limit, palette, span = JULIA_SPAN) {
+export function renderPixels(pixels, width, height, view, limit, palette, samples = 1) {
+  renderPixelRows(pixels, width, height, view, limit, palette, 0, height, samples);
+}
+
+export function renderJuliaPixelRows(pixels, width, height, c, limit, palette, startRow = 0, endRow = height, samples = 1, span = JULIA_SPAN) {
   const step = span / width;
-  const left = -span / 2;
-  const top = span * height / width / 2;
-  for (let row = 0; row < height; row++) {
-    for (let col = 0; col < width; col++) {
-      const value = juliaEscapeTime(left + (col + 0.5) * step, top - (row + 0.5) * step, c.x, c.y, limit);
-      paintSample(pixels, (row * width + col) * 4, value, palette);
-    }
-  }
+  renderSampledRows(
+    pixels,
+    width,
+    height,
+    step,
+    -span / 2,
+    span * height / width / 2,
+    limit,
+    palette,
+    samples,
+    startRow,
+    endRow,
+    (x, y, iterationLimit) => juliaEscapeTime(x, y, c.x, c.y, iterationLimit),
+  );
+}
+
+export function renderJuliaPixels(pixels, width, height, c, limit, palette, span = JULIA_SPAN, samples = 1) {
+  renderJuliaPixelRows(pixels, width, height, c, limit, palette, 0, height, samples, span);
 }
