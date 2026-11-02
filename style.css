@@ -48,6 +48,12 @@ h2 { font-size: 16px; font-weight: 600; margin: 0; }
 label { display: block; font-size: 9px; letter-spacing: 1.5px; font-weight: 650; color: #a5afc2; margin-bottom: 11px; }
 select { width: 100%; padding: 11px 10px; border: 1px solid #343d4f; border-radius: 6px; background: #1a2231; color: #e2e7ef; font-size: 12px; }
 .field-note { color: #7d8ba3; font-size: 10px; line-height: 1.6; margin: 9px 0 0; }
+.coordinate-label { margin-top: 18px; }
+.coordinate-entry { display: flex; gap: 6px; align-items: stretch; margin-top: 0; }
+.coordinate-entry input { flex: 1; min-width: 0; padding: 11px 8px; border: 1px solid #343d4f; border-radius: 6px; background: #1a2231; color: #e2e7ef; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; }
+.coordinate-entry input[aria-invalid="true"] { border-color: #d46a6a; }
+.coordinate-entry button { flex: none; border: 1px solid #30394a; background: transparent; color: #b2bdd0; border-radius: 6px; font-size: 11px; font-weight: 700; padding: 0 12px; }
+.coordinate-entry button:hover { background: #202b3c; color: var(--accent); border-color: var(--accent); }
 .separator { height: 1px; background: #2a3140; margin: 22px 0; }
 .label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .label-row label { margin: 0; }
@@ -93,6 +99,7 @@ kbd { font: inherit; border: 1px solid #394357; padding: 2px 5px; border-radius:
 .telemetry > div:last-child { border: 0; }
 .telemetry span { display: block; font-size: 8px; letter-spacing: 1.5px; color: #7e8da6; margin-bottom: 8px; }
 .telemetry strong { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 400; }
+#real-axis, #imaginary-axis { display: block; overflow-wrap: anywhere; }
 #magnification { color: var(--accent); }
 #status { font-family: inherit; font-size: 12px; }
 #status i { margin-right: 6px; }

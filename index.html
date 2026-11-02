@@ -56,6 +56,13 @@
             <option value="spiral">Spiral coast</option>
           </select>
           <p class="field-note">Pick a starting point. See where it takes you.</p>
+          <label class="coordinate-label" for="coordinate-real">COORDINATES</label>
+          <div class="coordinate-entry">
+            <input id="coordinate-real" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" enterkeyhint="go" aria-label="Real part" value="-0.743643887037151">
+            <input id="coordinate-imag" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" enterkeyhint="go" aria-label="Imaginary part" value="0.13182590420533">
+            <button id="go-coordinates" type="button" aria-label="Go to coordinates">Go</button>
+          </div>
+          <p class="field-note">Type the real and imaginary parts, including exponential notation, at full precision. Press Enter. A watermark coordinate can be pasted into the real part.</p>
           <div class="separator"></div>
           <div class="label-row"><label for="speed">ZOOM SPEED</label><output id="speed-value" for="speed">1.0×</output></div>
           <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1">
