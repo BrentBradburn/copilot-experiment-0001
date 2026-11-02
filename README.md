@@ -26,7 +26,7 @@ Add `?demo` to the URL to start in demo mode.
 - Click the image to zoom in while keeping the point under the pointer fixed.
 - Select a destination or **Reset view** to return to a preset.
 - Type a real and imaginary center, then press **Enter** or **Go**. Exponential notation is accepted at full precision, including a watermark coordinate pasted into the real part. The current magnification stays where it is.
-- Adjust zoom speed, iteration detail, and palette while exploring.
+- Adjust zoom speed, iteration detail, and palette while exploring. Detail level has 17 stops, from 1 to 65,536 iterations in powers of two.
 - Click **Polish frame** to re-render the current view in place at screen resolution. Choose **Frame quality** to add 2×2, 3×3, or 4×4 samples per pixel, which smooths the aliasing left by the live preview. Cancel from the same button. **Save artwork** downloads the finished still. **Location watermark** is on by default and signs the polished frame and saved PNG with a faint complex coordinate in the lower-left, so that center can be found again. Uncheck it for an unmarked still.
 - Use **⛶** to expand the visualization to fullscreen. Frame quality, **Polish frame**, and **Save artwork** stay on the image so a fullscreen view can be polished and downloaded the same way.
 - Watch the smaller **Live Julia** view: it is the Julia set for the center of the Mandelbrot image and updates as you pan, zoom, or play.
@@ -47,4 +47,4 @@ npm test
 Tests use Node’s built-in test runner to check escape calculations, pixel colors,
 coordinate mapping, pointer-anchored zooming, panning, zoom limits, the demo tour,
 animated zoom in and out, the side-by-side zoom controls, polished supersampled frames,
-fullscreen polish and save, the optional location watermark, keyboard entry of a center (including exponential notation), and the Julia set that corresponds to the current view center.
+fullscreen polish and save, the optional location watermark, keyboard entry of a center (including exponential notation), power-of-two detail levels, and the Julia set that corresponds to the current view center.

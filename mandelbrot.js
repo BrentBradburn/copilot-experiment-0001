@@ -24,6 +24,23 @@ export const palettes = {
 };
 
 export const JULIA_SPAN = 4;
+export const DETAIL_MIN_EXPONENT = 0;
+export const DETAIL_MAX_EXPONENT = 16;
+export const DETAIL_DEFAULT_EXPONENT = 8;
+
+export function detailIterations(position) {
+  const exponent = Math.round(Number(position));
+  const clamped = Number.isFinite(exponent)
+    ? Math.min(DETAIL_MAX_EXPONENT, Math.max(DETAIL_MIN_EXPONENT, exponent))
+    : DETAIL_DEFAULT_EXPONENT;
+  return 2 ** clamped;
+}
+
+export function normalizeDetailIterations(value) {
+  const iterations = Number(value);
+  if (!Number.isFinite(iterations) || iterations <= 0) return detailIterations(DETAIL_DEFAULT_EXPONENT);
+  return detailIterations(Math.log2(iterations));
+}
 
 export function correspondingC(view) {
   return { x: view.x, y: view.y };

@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, formatCoordinate, parseCoordinate, coordinatesFromEntry } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, formatCoordinate, parseCoordinate, coordinatesFromEntry, normalizeDetailIterations, DETAIL_MIN_EXPONENT, DETAIL_MAX_EXPONENT } from './mandelbrot.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -49,8 +49,42 @@ function displayScale() {
   return Math.min(devicePixelRatio || 1, 2);
 }
 
+function selectedIterations() {
+  return normalizeDetailIterations($('iterations').value);
+}
+
+function syncDetailLevel() {
+  const slider = $('iterations');
+  const minIterations = String(2 ** DETAIL_MIN_EXPONENT);
+  const maxIterations = String(2 ** DETAIL_MAX_EXPONENT);
+  if (slider.min !== minIterations) slider.min = minIterations;
+  if (slider.max !== maxIterations) slider.max = maxIterations;
+  const iterations = selectedIterations();
+  if (slider.value !== String(iterations)) slider.value = String(iterations);
+  const exponent = Math.round(Math.log2(iterations));
+  slider.parentElement.style.setProperty('--detail-stop', String((exponent - DETAIL_MIN_EXPONENT) / (DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT)));
+  const label = `${iterations} ${iterations === 1 ? 'iteration' : 'iterations'}`;
+  $('iterations-value').textContent = String(iterations);
+  slider.setAttribute('aria-valuetext', label);
+  slider.title = label;
+}
+
+function setDetailExponent(exponent) {
+  $('iterations').value = String(2 ** exponent);
+  syncDetailLevel();
+  cancelPolish();
+  requestDraw();
+}
+
+function exponentFromClientX(clientX) {
+  const bounds = $('iterations').getBoundingClientRect();
+  if (!bounds.width) return Math.round(Math.log2(selectedIterations()));
+  const fraction = Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width));
+  return DETAIL_MIN_EXPONENT + Math.round(fraction * (DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT));
+}
+
 function iterationLimit() {
-  return Number($('iterations').value) + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
+  return selectedIterations() + Math.max(0, Math.floor(Math.log2(INITIAL_SPAN / view.span)) - 8) * 40;
 }
 
 function polishSamples() {
@@ -68,7 +102,7 @@ function isPolishedCurrent() {
   const height = Math.round(bounds.height * displayScale());
   return sameView(polishedFrame)
     && polishedFrame.palette === $('palette').value
-    && polishedFrame.iterations === Number($('iterations').value)
+    && polishedFrame.iterations === selectedIterations()
     && polishedFrame.width === canvas.width
     && polishedFrame.height === canvas.height
     && canvas.width === width
@@ -196,7 +230,7 @@ function drawJulia(throttled = false) {
   const c = correspondingC(view);
   const polishedNow = isPolishedCurrent();
   const samples = polishedNow ? polishedFrame.samples : 1;
-  const limit = Math.min(Number($('iterations').value), playing || dragging ? 100 : 220);
+  const limit = Math.min(selectedIterations(), playing || dragging ? 100 : 220);
   const quality = polishedNow ? `polish-${samples}` : (playing || dragging ? 'low' : 'high');
   const key = `${c.x},${c.y},${limit},${quality},${$('palette').value},${bounds.width},${bounds.height}`;
   if (key === juliaKey) return;
@@ -461,7 +495,7 @@ function startPolish() {
   const samples = polishSamples();
   const paletteName = $('palette').value;
   const palette = palettes[paletteName];
-  const iterations = Number($('iterations').value);
+  const iterations = selectedIterations();
   const snapshot = { x: view.x, y: view.y, span: view.span };
   const width = Math.max(1, Math.round(bounds.width * displayScale()));
   const height = Math.max(1, Math.round(bounds.height * displayScale()));
@@ -690,9 +724,37 @@ $('speed').addEventListener('input', () => {
   $('speed-value').textContent = `${Number($('speed').value).toFixed(1)}×`;
 });
 $('iterations').addEventListener('input', () => {
-  $('iterations-value').textContent = $('iterations').value;
+  syncDetailLevel();
   cancelPolish();
   requestDraw();
+});
+$('iterations').addEventListener('pointerdown', (event) => {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  $('iterations').focus();
+  try {
+    $('iterations').setPointerCapture(event.pointerId);
+  } catch {
+    // The pointer can already be inactive; the value still follows this event.
+  }
+  setDetailExponent(exponentFromClientX(event.clientX));
+});
+$('iterations').addEventListener('pointermove', (event) => {
+  if (!$('iterations').hasPointerCapture?.(event.pointerId)) return;
+  setDetailExponent(exponentFromClientX(event.clientX));
+});
+$('iterations').addEventListener('keydown', (event) => {
+  const current = Math.round(Math.log2(selectedIterations()));
+  let next = null;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowUp') next = current + 1;
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') next = current - 1;
+  else if (event.key === 'PageUp') next = current + 2;
+  else if (event.key === 'PageDown') next = current - 2;
+  else if (event.key === 'Home') next = DETAIL_MIN_EXPONENT;
+  else if (event.key === 'End') next = DETAIL_MAX_EXPONENT;
+  else return;
+  event.preventDefault();
+  setDetailExponent(Math.min(DETAIL_MAX_EXPONENT, Math.max(DETAIL_MIN_EXPONENT, next)));
 });
 $('palette').addEventListener('change', () => {
   $('palette-preview').dataset.palette = $('palette').value;
@@ -799,6 +861,7 @@ document.addEventListener('fullscreenchange', syncFullscreenPolish);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && playing) setPlaying(false);
 });
+syncDetailLevel();
 new ResizeObserver(requestDraw).observe(canvas);
 const demoQuery = new URLSearchParams(location.search).get('demo');
 if (demoQuery !== null && demoQuery !== '0' && demoQuery !== 'false') beginDemo();
