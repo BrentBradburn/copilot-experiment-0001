@@ -22,6 +22,7 @@ createServer(async (request, response) => {
     response.writeHead(200, {
       'Content-Type': `${file[1]}; charset=utf-8`,
       'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-cache',
       'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
     });
     response.end(request.method === 'HEAD' ? undefined : body);

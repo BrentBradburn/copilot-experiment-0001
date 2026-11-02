@@ -1,4 +1,4 @@
-import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, detailIterations } from './mandelbrot.js';
+import { INITIAL_SPAN, MIN_SPAN, correspondingC, destinations, palettes, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixelRows, renderJuliaPixelRows, pointsOfInterest, startDemo, stepDemo, normalizeSamples, JULIA_SPAN, formatArtworkMark, normalizeDetailIterations, DETAIL_MIN_EXPONENT, DETAIL_MAX_EXPONENT } from './mandelbrot.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('fractal');
@@ -50,13 +50,33 @@ function displayScale() {
 }
 
 function selectedIterations() {
-  return detailIterations($('iterations').value);
+  return normalizeDetailIterations($('iterations').value);
 }
 
 function syncDetailLevel() {
   const iterations = selectedIterations();
+  const slider = $('iterations');
+  if (slider.value !== String(iterations)) slider.value = String(iterations);
+  const exponent = Math.round(Math.log2(iterations));
+  slider.parentElement.style.setProperty('--detail-stop', String((exponent - DETAIL_MIN_EXPONENT) / (DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT)));
+  const label = `${iterations} ${iterations === 1 ? 'iteration' : 'iterations'}`;
   $('iterations-value').textContent = String(iterations);
-  $('iterations').setAttribute('aria-valuetext', `${iterations} iterations`);
+  slider.setAttribute('aria-valuetext', label);
+  slider.title = label;
+}
+
+function setDetailExponent(exponent) {
+  $('iterations').value = String(2 ** exponent);
+  syncDetailLevel();
+  cancelPolish();
+  requestDraw();
+}
+
+function exponentFromClientX(clientX) {
+  const bounds = $('iterations').getBoundingClientRect();
+  if (!bounds.width) return Math.round(Math.log2(selectedIterations()));
+  const fraction = Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width));
+  return DETAIL_MIN_EXPONENT + Math.round(fraction * (DETAIL_MAX_EXPONENT - DETAIL_MIN_EXPONENT));
 }
 
 function iterationLimit() {
@@ -633,6 +653,34 @@ $('iterations').addEventListener('input', () => {
   syncDetailLevel();
   cancelPolish();
   requestDraw();
+});
+$('iterations').addEventListener('pointerdown', (event) => {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  $('iterations').focus();
+  try {
+    $('iterations').setPointerCapture(event.pointerId);
+  } catch {
+    // The pointer can already be inactive; the value still follows this event.
+  }
+  setDetailExponent(exponentFromClientX(event.clientX));
+});
+$('iterations').addEventListener('pointermove', (event) => {
+  if (!$('iterations').hasPointerCapture?.(event.pointerId)) return;
+  setDetailExponent(exponentFromClientX(event.clientX));
+});
+$('iterations').addEventListener('keydown', (event) => {
+  const current = Math.round(Math.log2(selectedIterations()));
+  let next = null;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowUp') next = current + 1;
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') next = current - 1;
+  else if (event.key === 'PageUp') next = current + 2;
+  else if (event.key === 'PageDown') next = current - 2;
+  else if (event.key === 'Home') next = DETAIL_MIN_EXPONENT;
+  else if (event.key === 'End') next = DETAIL_MAX_EXPONENT;
+  else return;
+  event.preventDefault();
+  setDetailExponent(Math.min(DETAIL_MAX_EXPONENT, Math.max(DETAIL_MIN_EXPONENT, next)));
 });
 $('palette').addEventListener('change', () => {
   $('palette-preview').dataset.palette = $('palette').value;

@@ -36,6 +36,12 @@ export function detailIterations(position) {
   return 2 ** clamped;
 }
 
+export function normalizeDetailIterations(value) {
+  const iterations = Number(value);
+  if (!Number.isFinite(iterations) || iterations <= 0) return detailIterations(DETAIL_DEFAULT_EXPONENT);
+  return detailIterations(Math.log2(iterations));
+}
+
 export function correspondingC(view) {
   return { x: view.x, y: view.y };
 }

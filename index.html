@@ -7,7 +7,7 @@
     <title>Infinite — Mandelbrot Explorer</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230c101b'/%3E%3Ctext x='32' y='47' text-anchor='middle' font-size='54' fill='%2378e1c4'%3E∞%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="style.css">
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=2"></script>
   </head>
   <body>
     <header>
@@ -61,8 +61,11 @@
           <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1">
           <div class="range-labels"><span>Take it slow</span><span>Dive in</span></div>
           <div class="label-row detail-label"><label for="iterations">DETAIL LEVEL</label><output id="iterations-value" for="iterations">256</output></div>
-          <input id="iterations" type="range" min="0" max="14" step="1" value="8" aria-valuetext="256 iterations">
-          <div class="range-labels"><span>Faster</span><span>Sharper</span></div>
+          <div class="detail-slider">
+            <input id="iterations" type="range" min="1" max="16384" step="1" value="256" aria-valuetext="256 iterations" title="256 iterations">
+            <span class="detail-track" aria-hidden="true"><i></i></span>
+          </div>
+          <div class="range-labels"><span>1</span><span>16,384</span></div>
           <div class="separator"></div>
           <label for="palette">COLOR PALETTE</label>
           <select id="palette">
