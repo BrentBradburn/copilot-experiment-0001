@@ -123,6 +123,33 @@ test('detail level slider value is the iteration count, not the exponent', async
   assert.equal(app.includes("Number($('iterations').value)"), false);
 });
 
+test('coordinates can be entered from the keyboard at full precision', async () => {
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  const controls = html.match(/<aside class="controls"[\s\S]*?<\/aside>/);
+  assert.ok(controls, 'coordinate entry should live with the expedition controls');
+  assert.match(controls[0], /id="coordinate-real"/);
+  assert.match(controls[0], /id="coordinate-imag"/);
+  assert.match(controls[0], /aria-label="Real part"/);
+  assert.match(controls[0], /aria-label="Imaginary part"/);
+  assert.match(controls[0], /id="go-coordinates"/);
+  assert.match(controls[0], /exponential notation/);
+  assert.equal(controls[0].indexOf('id="coordinate-real"') < controls[0].indexOf('id="polish-panel"'), true);
+  assert.match(css, /\.coordinate-entry\s*\{[^}]*display:\s*flex/);
+  assert.match(css, /\.coordinate-entry input\[aria-invalid="true"\]/);
+  const applyStart = app.indexOf('function applyCoordinates()');
+  const apply = app.slice(applyStart, app.indexOf('\nfunction ', applyStart + 1));
+  assert.ok(applyStart >= 0, 'coordinate entry should apply through one function');
+  assert.match(apply, /coordinatesFromEntry\(realInput\.value, imagInput\.value\)/);
+  assert.match(apply, /view = \{ x: entered\.x, y: entered\.y, span: view\.span \}/);
+  assert.equal(apply.includes('toFixed'), false);
+  assert.match(app, /if \(event\.key !== 'Enter'\) return;/);
+  assert.match(app, /\$\('go-coordinates'\)\.addEventListener\('click', applyCoordinates\)/);
+  assert.match(app, /\$\('coordinate-real'\)\.addEventListener\('keydown', submitCoordinates\)/);
+  assert.match(app, /\$\('coordinate-imag'\)\.addEventListener\('keydown', submitCoordinates\)/);
+});
+
 test('status panel stays directly under the render panel', async () => {
   const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
   const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');

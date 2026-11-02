@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderPixelRows, renderJuliaPixels, renderJuliaPixelRows, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS, normalizeSamples, formatArtworkMark, parseArtworkMark, detailIterations, normalizeDetailIterations, DETAIL_MIN_EXPONENT, DETAIL_MAX_EXPONENT, DETAIL_DEFAULT_EXPONENT } from './mandelbrot.js';
+import { escapeTime, juliaEscapeTime, pointAt, zoomAt, continuousZoomFactor, panBy, panOffset, renderPixels, renderPixelRows, renderJuliaPixels, renderJuliaPixelRows, correspondingC, palettes, destinations, pointsOfInterest, pickPointOfInterest, createDemoState, startDemo, stepDemo, INITIAL_SPAN, MIN_SPAN, JULIA_SPAN, DEMO_DWELL_SECONDS, normalizeSamples, formatArtworkMark, parseArtworkMark, formatCoordinate, parseCoordinate, coordinatesFromEntry, detailIterations, normalizeDetailIterations, DETAIL_MIN_EXPONENT, DETAIL_MAX_EXPONENT, DETAIL_DEFAULT_EXPONENT } from './mandelbrot.js';
 
 test('known interior points remain bounded and exterior points escape', () => {
   for (const [x, y] of [[0, 0], [-1, 0], [-0.5, 0.5]]) assert.equal(escapeTime(x, y, 240), -1);
@@ -269,6 +269,36 @@ test('artwork mark is a single complex coordinate and does not move the view', (
   assert.equal(parseArtworkMark('not a mark'), null);
   assert.equal(parseArtworkMark('1 + 2i\n3×'), null);
   assert.equal(parseArtworkMark('1 + 2'), null);
+});
+
+test('keyboard coordinates accept exponential notation at full precision', () => {
+  const real = -1.234567890123456e-11;
+  const imag = 9.876543210987654e-9;
+  assert.notEqual(real, Number(real.toFixed(10)));
+  assert.match(formatCoordinate(real), /e/i);
+  assert.equal(parseCoordinate(formatCoordinate(real)), real);
+  assert.equal(parseCoordinate(imag.toExponential()), imag);
+  assert.equal(parseCoordinate('  +6.25E-2 '), 0.0625);
+  assert.equal(parseCoordinate('−0.5'), -0.5);
+  assert.equal(Object.is(parseCoordinate('-0'), -0), true);
+  assert.equal(parseCoordinate(''), null);
+  assert.equal(parseCoordinate('1.2e-3i'), null);
+  assert.equal(parseCoordinate('1.2e'), null);
+  assert.equal(parseCoordinate('Infinity'), null);
+  assert.equal(parseCoordinate('1e309'), null);
+  assert.equal(parseCoordinate(real.toFixed(10)), Number(real.toFixed(10)));
+  const entered = coordinatesFromEntry(formatCoordinate(real), formatCoordinate(imag));
+  assert.equal(entered.x, real);
+  assert.equal(entered.y, imag);
+  assert.equal('span' in entered, false);
+  const mark = formatArtworkMark({ x: real, y: imag, span: MIN_SPAN });
+  assert.match(mark.text, /e/i);
+  const fromMark = coordinatesFromEntry(mark.text, '99');
+  assert.equal(fromMark.x, real);
+  assert.equal(fromMark.y, imag);
+  assert.equal(coordinatesFromEntry('−1.25e-8 + 3e-9i', '').y, 3e-9);
+  assert.equal(coordinatesFromEntry('nope', '1'), null);
+  assert.equal(coordinatesFromEntry('1.5', ''), null);
 });
 
 test('default destination retains visible structure at deep zoom', () => {

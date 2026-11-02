@@ -200,14 +200,35 @@ export function normalizeSamples(samples) {
 const EXACT_NUMBER = '[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?';
 const UNSIGNED_NUMBER = '(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?';
 
-function formatExact(value) {
+export function formatCoordinate(value) {
   if (Object.is(value, -0)) return '-0';
   return value.toString();
 }
 
+function normalizeCoordinateText(text) {
+  return String(text).trim().replaceAll('−', '-');
+}
+
+export function parseCoordinate(text) {
+  const value = normalizeCoordinateText(text);
+  if (!new RegExp(`^${EXACT_NUMBER}$`).test(value)) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+export function coordinatesFromEntry(realText, imagText) {
+  const real = normalizeCoordinateText(realText);
+  const pasted = parseArtworkMark(real);
+  if (pasted) return { x: pasted.x, y: pasted.y };
+  const x = parseCoordinate(real);
+  const y = parseCoordinate(imagText);
+  if (x === null || y === null) return null;
+  return { x, y };
+}
+
 export function formatArtworkMark(view) {
   const yNegative = view.y < 0 || Object.is(view.y, -0);
-  const text = `${formatExact(view.x)} ${yNegative ? '-' : '+'} ${formatExact(Math.abs(view.y))}i`;
+  const text = `${formatCoordinate(view.x)} ${yNegative ? '-' : '+'} ${formatCoordinate(Math.abs(view.y))}i`;
   return { text };
 }
 
